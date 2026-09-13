@@ -1,0 +1,29 @@
+Character @Catalog                      # a person or droid in the archive
+  id*
+  name
+  homeworld: Planet
+  films: Film[]
+  popularityRank: int @Community
+
+Planet @Catalog
+  id*
+  name
+  climate: arid|temperate|frozen|unknown
+
+Film @Catalog
+  id*
+  title
+  releasedOn: date
+  characters: Character[]
+
+Starship @Catalog
+  id*
+  name
+  crewSize: int                         ? is this seats or minimum crew
+  pilots: Character[]
+
+CharacterPage @Community ~ Character    # the community wiki's version
+  slug*
+  characterId = Character.id
+  summary                               # free text, written by editors
+  editCount: int

@@ -1,0 +1,34 @@
+classDiagram
+  class Ship {
+    <<Fleet>>
+    *id
+    +name
+    +itn crewSize
+    +registration
+    +name
+    +Person captain
+  }
+  class Person {
+    <<Crew>>
+    *id
+    +name
+    +Ship[] ships
+  }
+  class Vessel {
+    <<Registry>>
+    *id
+    +shipId
+    +captainName
+  }
+  class Person {
+    <<Registry>>
+    +email
+  }
+  class Ghost {
+    <<undeclared>>
+  }
+  Ship --> Person : captain
+  Person "1" --> "*" Ship : ships
+  Vessel ..> Ghost : similar
+  Vessel ..> Ship : shipId = id
+  Vessel ..> Person : captainName = fullName

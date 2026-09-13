@@ -1,0 +1,32 @@
+# Fixtures
+
+Golden files. Each fixture is a `.skiss` input next to the outputs it must
+produce, derived by hand from `docs/SPEC.md` and the mapping tables in
+`docs/ARCHITECTURE.md`. The code is held to these files, not the other way
+round. A fixture change is a language change and is reviewed as one.
+
+**basic** (`basic.skiss`, `basic.mmd`). The example from SPEC §2, verbatim.
+It uses every operator and marker once in a small model, and its Mermaid
+output is the reference for the mapping table with `notes` off. The LinkML
+output for SPEC §5.3 is added in Milestone 2.
+
+**systems** (`systems.skiss`, `systems.mmd`). A second model, a library
+lending system across three systems, chosen to exercise the corners `basic`
+does not: a field that names its own `@System`, `~` and `=` together on one
+class, the same field name (`status`) with different enum values on two
+classes, `[]` on an inline enum, a class with no identifier, a description
+and a doubt on class lines, a description whose text contains a `?` followed
+by a real doubt, a field with only a doubt, the `integer` and `boolean`
+aliases, and a column-0 comment. Its Mermaid output is derived with `notes`
+off, so no description or doubt appears in it.
+
+**broken** (`broken.skiss`, `broken.mmd`, `broken.diagnostics.json`). The
+mid-typing states. Every diagnostic code in the ARCHITECTURE.md table
+appears at least once, on a line preceded by a column-0 comment naming the
+code. Valid lines are interleaved so the partial document still has
+complete classes and relations. `broken.diagnostics.json` lists the
+expected code, severity and 1-based line for each diagnostic, sorted by
+line, without messages. `broken.mmd` is the diagram of the partial
+document: lines that produce an error are absent, lines that produce a
+warning are present, and classes that are referenced but never declared
+appear as `<<undeclared>>` placeholders.

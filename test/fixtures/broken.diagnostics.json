@@ -1,0 +1,16 @@
+{
+  "diagnostics": [
+    { "code": "E_FIELD_WITHOUT_CLASS", "severity": "error", "line": 2 },
+    { "code": "E_MISSING_TYPE", "severity": "error", "line": 8 },
+    { "code": "E_UNCLOSED_MANY", "severity": "error", "line": 10 },
+    { "code": "W_UNKNOWN_TYPE", "severity": "warning", "line": 12 },
+    { "code": "W_MULTIPLE_IDENTIFIERS", "severity": "warning", "line": 14 },
+    { "code": "W_DUPLICATE_FIELD", "severity": "warning", "line": 16 },
+    { "code": "E_UNPARSABLE", "severity": "error", "line": 23 },
+    { "code": "E_BAD_NAME", "severity": "error", "line": 25 },
+    { "code": "E_BAD_NAME", "severity": "error", "line": 29 },
+    { "code": "W_UNDECLARED_CLASS", "severity": "warning", "line": 32 },
+    { "code": "W_UNDECLARED_FIELD", "severity": "warning", "line": 36 },
+    { "code": "W_DUPLICATE_CLASS", "severity": "warning", "line": 39 }
+  ]
+}

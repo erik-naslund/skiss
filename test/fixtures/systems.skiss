@@ -1,0 +1,36 @@
+# Lending across the branch catalogue and the public website.
+
+Book @Catalog                           # a physical copy on a shelf
+  isbn*
+  title
+  format: hardback|paperback|audio
+  status: available|loaned|lost         ? do we track reserved separately
+  author: Author
+  subjects: fiction|history|science[]
+  pageCount: integer
+
+Author @Catalog
+  id*
+  name
+  born: date
+  books: Book[]
+
+Loan @Circulation                       ? should this live in Catalog instead
+  book: Book
+  member: Member
+  dueOn: date
+  overdue: boolean
+  status: open|returned                 # is this the loan or the book? ? ask the desk staff
+
+Member @Circulation
+  id*
+  name
+  email
+  loans: Loan[]
+  newsletter: boolean @Website
+
+BookListing @Website ~ Book             # what the public site shows
+  slug*
+  bookIsbn = Book.isbn
+  blurb                                 # editorial summary
+  hits: int
