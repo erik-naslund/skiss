@@ -89,7 +89,7 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 | Code | Severity | Trigger |
 |---|---|---|
 | `E_UNPARSABLE` | error | The line matches no production. |
-| `E_FIELD_WITHOUT_CLASS` | error | An indented line before any class line. |
+| `E_FIELD_WITHOUT_CLASS` | error | An indented line with no current class: before any class line, or after a class line that failed to parse. A failed class line clears the current class so its fields are not silently attached to the previous one. |
 | `E_MISSING_TYPE` | error | A colon with nothing after it. |
 | `E_UNCLOSED_MANY` | error | `[` without `]`. |
 | `E_BAD_NAME` | error | A class name not in UpperCamelCase, or a field name not in lowerCamelCase. |
