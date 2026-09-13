@@ -6,9 +6,10 @@ produce, derived by hand from `docs/SPEC.md` and the mapping tables in
 round. A fixture change is a language change and is reviewed as one.
 
 **basic** (`basic.skiss`, `basic.mmd`). The example from SPEC §2, verbatim.
-It uses every operator and marker once in a small model, and its Mermaid
-output is the reference for the mapping table with `notes` off. The LinkML
-output for SPEC §5.3 is added in Milestone 2.
+It uses every operator and marker at least once in a small model, and its
+Mermaid output is the reference for the mapping table with `notes` off. Its
+LinkML output (`basic.linkml.yaml`) is added in Milestone 2; the SPEC §5.3
+worked example is a separate, smaller golden added then as well.
 
 **systems** (`systems.skiss`, `systems.mmd`). A second model, a library
 lending system across three systems, chosen to exercise the corners `basic`
