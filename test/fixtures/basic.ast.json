@@ -1,0 +1,434 @@
+{
+  "classes": [
+    {
+      "name": {
+        "text": "Character",
+        "line": 1,
+        "col": 0,
+        "end": 9
+      },
+      "line": 1,
+      "system": {
+        "text": "Catalog",
+        "line": 1,
+        "col": 11,
+        "end": 18
+      },
+      "description": "a person or droid in the archive",
+      "fields": [
+        {
+          "name": {
+            "text": "id",
+            "line": 2,
+            "col": 2,
+            "end": 4
+          },
+          "line": 2,
+          "identifier": true
+        },
+        {
+          "name": {
+            "text": "name",
+            "line": 3,
+            "col": 2,
+            "end": 6
+          },
+          "line": 3,
+          "identifier": false
+        },
+        {
+          "name": {
+            "text": "homeworld",
+            "line": 4,
+            "col": 2,
+            "end": 11
+          },
+          "line": 4,
+          "identifier": false,
+          "type": {
+            "kind": "class",
+            "name": {
+              "text": "Planet",
+              "line": 4,
+              "col": 13,
+              "end": 19
+            },
+            "many": false
+          }
+        },
+        {
+          "name": {
+            "text": "films",
+            "line": 5,
+            "col": 2,
+            "end": 7
+          },
+          "line": 5,
+          "identifier": false,
+          "type": {
+            "kind": "class",
+            "name": {
+              "text": "Film",
+              "line": 5,
+              "col": 9,
+              "end": 13
+            },
+            "many": true
+          }
+        },
+        {
+          "name": {
+            "text": "popularityRank",
+            "line": 6,
+            "col": 2,
+            "end": 16
+          },
+          "line": 6,
+          "identifier": false,
+          "type": {
+            "kind": "primitive",
+            "name": "int",
+            "written": {
+              "text": "int",
+              "line": 6,
+              "col": 18,
+              "end": 21
+            },
+            "many": false
+          },
+          "system": {
+            "text": "Community",
+            "line": 6,
+            "col": 23,
+            "end": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "text": "Planet",
+        "line": 8,
+        "col": 0,
+        "end": 6
+      },
+      "line": 8,
+      "system": {
+        "text": "Catalog",
+        "line": 8,
+        "col": 8,
+        "end": 15
+      },
+      "fields": [
+        {
+          "name": {
+            "text": "id",
+            "line": 9,
+            "col": 2,
+            "end": 4
+          },
+          "line": 9,
+          "identifier": true
+        },
+        {
+          "name": {
+            "text": "name",
+            "line": 10,
+            "col": 2,
+            "end": 6
+          },
+          "line": 10,
+          "identifier": false
+        },
+        {
+          "name": {
+            "text": "climate",
+            "line": 11,
+            "col": 2,
+            "end": 9
+          },
+          "line": 11,
+          "identifier": false,
+          "type": {
+            "kind": "enum",
+            "values": [
+              {
+                "text": "arid",
+                "line": 11,
+                "col": 11,
+                "end": 15
+              },
+              {
+                "text": "temperate",
+                "line": 11,
+                "col": 16,
+                "end": 25
+              },
+              {
+                "text": "frozen",
+                "line": 11,
+                "col": 26,
+                "end": 32
+              },
+              {
+                "text": "unknown",
+                "line": 11,
+                "col": 33,
+                "end": 40
+              }
+            ],
+            "many": false
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "text": "Film",
+        "line": 13,
+        "col": 0,
+        "end": 4
+      },
+      "line": 13,
+      "system": {
+        "text": "Catalog",
+        "line": 13,
+        "col": 6,
+        "end": 13
+      },
+      "fields": [
+        {
+          "name": {
+            "text": "id",
+            "line": 14,
+            "col": 2,
+            "end": 4
+          },
+          "line": 14,
+          "identifier": true
+        },
+        {
+          "name": {
+            "text": "title",
+            "line": 15,
+            "col": 2,
+            "end": 7
+          },
+          "line": 15,
+          "identifier": false
+        },
+        {
+          "name": {
+            "text": "releasedOn",
+            "line": 16,
+            "col": 2,
+            "end": 12
+          },
+          "line": 16,
+          "identifier": false,
+          "type": {
+            "kind": "primitive",
+            "name": "date",
+            "written": {
+              "text": "date",
+              "line": 16,
+              "col": 14,
+              "end": 18
+            },
+            "many": false
+          }
+        },
+        {
+          "name": {
+            "text": "characters",
+            "line": 17,
+            "col": 2,
+            "end": 12
+          },
+          "line": 17,
+          "identifier": false,
+          "type": {
+            "kind": "class",
+            "name": {
+              "text": "Character",
+              "line": 17,
+              "col": 14,
+              "end": 23
+            },
+            "many": true
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "text": "Starship",
+        "line": 19,
+        "col": 0,
+        "end": 8
+      },
+      "line": 19,
+      "system": {
+        "text": "Catalog",
+        "line": 19,
+        "col": 10,
+        "end": 17
+      },
+      "fields": [
+        {
+          "name": {
+            "text": "id",
+            "line": 20,
+            "col": 2,
+            "end": 4
+          },
+          "line": 20,
+          "identifier": true
+        },
+        {
+          "name": {
+            "text": "name",
+            "line": 21,
+            "col": 2,
+            "end": 6
+          },
+          "line": 21,
+          "identifier": false
+        },
+        {
+          "name": {
+            "text": "crewSize",
+            "line": 22,
+            "col": 2,
+            "end": 10
+          },
+          "line": 22,
+          "identifier": false,
+          "type": {
+            "kind": "primitive",
+            "name": "int",
+            "written": {
+              "text": "int",
+              "line": 22,
+              "col": 12,
+              "end": 15
+            },
+            "many": false
+          },
+          "note": "is this seats or minimum crew"
+        },
+        {
+          "name": {
+            "text": "pilots",
+            "line": 23,
+            "col": 2,
+            "end": 8
+          },
+          "line": 23,
+          "identifier": false,
+          "type": {
+            "kind": "class",
+            "name": {
+              "text": "Character",
+              "line": 23,
+              "col": 10,
+              "end": 19
+            },
+            "many": true
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "text": "CharacterPage",
+        "line": 25,
+        "col": 0,
+        "end": 13
+      },
+      "line": 25,
+      "system": {
+        "text": "Community",
+        "line": 25,
+        "col": 15,
+        "end": 24
+      },
+      "similarTo": {
+        "text": "Character",
+        "line": 25,
+        "col": 27,
+        "end": 36
+      },
+      "description": "the community wiki's version",
+      "fields": [
+        {
+          "name": {
+            "text": "slug",
+            "line": 26,
+            "col": 2,
+            "end": 6
+          },
+          "line": 26,
+          "identifier": true
+        },
+        {
+          "name": {
+            "text": "characterId",
+            "line": 27,
+            "col": 2,
+            "end": 13
+          },
+          "line": 27,
+          "identifier": false,
+          "joinsTo": {
+            "className": {
+              "text": "Character",
+              "line": 27,
+              "col": 16,
+              "end": 25
+            },
+            "fieldName": {
+              "text": "id",
+              "line": 27,
+              "col": 26,
+              "end": 28
+            }
+          }
+        },
+        {
+          "name": {
+            "text": "summary",
+            "line": 28,
+            "col": 2,
+            "end": 9
+          },
+          "line": 28,
+          "identifier": false,
+          "description": "free text, written by editors"
+        },
+        {
+          "name": {
+            "text": "editCount",
+            "line": 29,
+            "col": 2,
+            "end": 11
+          },
+          "line": 29,
+          "identifier": false,
+          "type": {
+            "kind": "primitive",
+            "name": "int",
+            "written": {
+              "text": "int",
+              "line": 29,
+              "col": 13,
+              "end": 16
+            },
+            "many": false
+          }
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
