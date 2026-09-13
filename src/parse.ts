@@ -2,9 +2,11 @@
 //
 // Each line is read on its own. The one piece of state carried from line to
 // line is which class is current, so a field can attach to it and a field
-// before any class can be reported as E_FIELD_WITHOUT_CLASS. No line changes
-// how another line is *read*; a line that fails to parse is skipped and does
-// not change the current class either.
+// with no current class can be reported as E_FIELD_WITHOUT_CLASS. No line
+// changes how another line is *read*; a line that fails to parse is skipped.
+// A failed class line clears the current class (ARCHITECTURE.md, diagnostics
+// table), so the fields under it are reported rather than silently attached
+// to the previous class.
 //
 // Nothing here throws. A line that does not match the grammar produces exactly
 // one diagnostic with severity `error` and is skipped.
@@ -50,7 +52,11 @@ export function parse(source: string): Document {
   const diagnostics: Diagnostic[] = [];
   let current: ClassNode | undefined;
 
-  const lines = source.split(/\r\n|\n|\r/);
+  // A single leading U+FEFF is an editor's byte order mark, not content.
+  // Stripping it keeps line 1 a class line and columns equal to what the
+  // editor shows, since editors hide the BOM.
+  const text0 = source.startsWith('\ufeff') ? source.slice(1) : source;
+  const lines = text0.split(/\r\n|\n|\r/);
   for (let i = 0; i < lines.length; i++) {
     const line = i + 1;
     const text = (lines[i] ?? '').replace(/[ \t]+$/, '');
@@ -63,7 +69,7 @@ export function parse(source: string): Document {
         diagnostics.push({
           severity: 'error',
           code: 'E_FIELD_WITHOUT_CLASS',
-          message: 'An indented line is a field, but no class is declared above it',
+          message: 'An indented line is a field, but there is no valid class line above it',
           line,
           col: start,
           end: text.length,
@@ -82,7 +88,11 @@ export function parse(source: string): Document {
         classes.push(result.value);
         current = result.value;
       } else {
+        // A failed class line clears the current class: the indented lines
+        // under it report E_FIELD_WITHOUT_CLASS until the next class line
+        // parses, instead of attaching to the previous class.
         diagnostics.push(result.diagnostic);
+        current = undefined;
       }
       continue;
     }
@@ -304,11 +314,14 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
 
   const head = take(c);
   if (head === undefined) {
+    // Nothing before the trailer. SPEC §3.1 defines comments at column 0
+    // only, so an indented `#` line is a field line without a name.
     const col = text.search(/[^ \t]/);
-    return fail('E_UNPARSABLE', 'A field line needs a field name before its trailer', line, {
-      col,
-      end: Math.max(col + 1, text.length),
-    });
+    const message =
+      text[col] === '#'
+        ? 'A `#` comment must start at column 0; an indented line is a field and needs a name'
+        : 'A field line needs a field name before its trailer';
+    return fail('E_UNPARSABLE', message, line, { col, end: Math.max(col + 1, text.length) });
   }
   if (head.kind !== 'word') return unexpected(head, line, 'field', FIELD_ORDER);
   if (!FIELD_NAME.test(head.text)) {

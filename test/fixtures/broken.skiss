@@ -27,6 +27,8 @@ Person @Crew
 
 # E_BAD_NAME: a class name that is not UpperCamelCase
 port @Registry
+  id*
+  name
 
 # W_UNDECLARED_CLASS: a mapping to a class that does not exist
 Vessel @Registry ~ Ghost

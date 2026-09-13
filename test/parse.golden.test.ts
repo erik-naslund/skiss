@@ -37,21 +37,26 @@ describe('broken.skiss (ARCHITECTURE.md diagnostics table)', () => {
 
   test('the partial document contains every class and field that broken.mmd shows', () => {
     // Read the class bodies out of the Mermaid golden: `class X {` opens one,
-    // and each member line is `*name` or `+[type ]name[ @System]`.
-    const expected: { name: string; fields: string[] }[] = [];
+    // `<<...>>` is its stereotype, and each member line is `*name` or
+    // `+[type ]name[ @System]`.
+    const expected: { name: string; undeclared: boolean; fields: string[] }[] = [];
     for (const raw of fixture('broken.mmd').split('\n')) {
       const line = raw.trim();
       const open = /^class (\w+) \{$/.exec(line);
       if (open?.[1]) {
-        expected.push({ name: open[1], fields: [] });
+        expected.push({ name: open[1], undeclared: false, fields: [] });
         continue;
       }
-      const member = /^[*+](?:\S+ )?(\w+)(?: @\w+)?$/.exec(line);
       const last = expected[expected.length - 1];
-      if (member?.[1] && last) last.fields.push(member[1]);
+      if (last === undefined) continue;
+      if (line === '<<undeclared>>') last.undeclared = true;
+      const member = /^[*+](?:\S+ )?(\w+)(?: @\w+)?$/.exec(line);
+      if (member?.[1]) last.fields.push(member[1]);
     }
-    // A `<<undeclared>>` placeholder has no members and is not a parsed class.
-    const declared = expected.filter((c) => c.fields.length > 0);
+    // A `<<undeclared>>` placeholder is drawn by resolve, not parsed.
+    const declared = expected
+      .filter((c) => !c.undeclared)
+      .map(({ name, fields }) => ({ name, fields }));
     const actual = doc.classes.map((c) => ({
       name: c.name.text,
       fields: c.fields.map((f) => f.name.text),

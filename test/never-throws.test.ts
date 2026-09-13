@@ -37,7 +37,16 @@ const CODES = new Set([
 
 describe('parse never throws (SPEC §7, ADR 0004)', () => {
   test('empty, whitespace-only, CRLF, tabs and binary garbage all return a document', () => {
-    for (const s of ['', ' ', '\n\n', ' \t \n\t', 'A\r\n  b\r\n', '\tx', '\0\ud800']) {
+    for (const s of [
+      '',
+      ' ',
+      '\n\n',
+      ' \t \n\t',
+      'A\r\n  b\r\n',
+      '\tx',
+      '\0\ud800',
+      '\ufeffA\n  b',
+    ]) {
       const doc = parse(s);
       expect(Array.isArray(doc.classes)).toBe(true);
       expect(Array.isArray(doc.diagnostics)).toBe(true);
@@ -46,6 +55,12 @@ describe('parse never throws (SPEC §7, ADR 0004)', () => {
     expect(parse(' \t \n\t').diagnostics).toEqual([]);
     expect(parse('A\r\n  b\r\n').classes[0]?.fields[0]?.name.text).toBe('b');
     expect(parse('A\n\tb').classes[0]?.fields[0]?.name.text).toBe('b');
+    // A leading BOM is stripped: one class, one field, no diagnostics.
+    const bom = parse('\ufeffA\n  b');
+    expect(bom.diagnostics).toEqual([]);
+    expect(bom.classes.map((c) => [c.name.text, c.fields.map((f) => f.name.text)])).toEqual([
+      ['A', ['b']],
+    ]);
   });
 
   test('1000 random strings: no throw, only error diagnostics with known codes, plain data', () => {

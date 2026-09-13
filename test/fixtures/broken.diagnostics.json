@@ -9,8 +9,10 @@
     { "code": "E_UNPARSABLE", "severity": "error", "line": 23 },
     { "code": "E_BAD_NAME", "severity": "error", "line": 25 },
     { "code": "E_BAD_NAME", "severity": "error", "line": 29 },
-    { "code": "W_UNDECLARED_CLASS", "severity": "warning", "line": 32 },
-    { "code": "W_UNDECLARED_FIELD", "severity": "warning", "line": 36 },
-    { "code": "W_DUPLICATE_CLASS", "severity": "warning", "line": 39 }
+    { "code": "E_FIELD_WITHOUT_CLASS", "severity": "error", "line": 30 },
+    { "code": "E_FIELD_WITHOUT_CLASS", "severity": "error", "line": 31 },
+    { "code": "W_UNDECLARED_CLASS", "severity": "warning", "line": 34 },
+    { "code": "W_UNDECLARED_FIELD", "severity": "warning", "line": 38 },
+    { "code": "W_DUPLICATE_CLASS", "severity": "warning", "line": 41 }
   ]
 }
