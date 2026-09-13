@@ -5,11 +5,13 @@ produce, derived by hand from `docs/SPEC.md` and the mapping tables in
 `docs/ARCHITECTURE.md`. The code is held to these files, not the other way
 round. A fixture change is a language change and is reviewed as one.
 
-**basic** (`basic.skiss`, `basic.mmd`). The example from SPEC §2, verbatim.
-It uses every operator and marker at least once in a small model, and its
-Mermaid output is the reference for the mapping table with `notes` off. Its
-LinkML output (`basic.linkml.yaml`) is added in Milestone 2; the SPEC §5.3
-worked example is a separate, smaller golden added then as well.
+**basic** (`basic.skiss`, `basic.ast.json`, `basic.mmd`). The example from
+SPEC §2, verbatim. It uses every operator and marker at least once in a small
+model, and its Mermaid output is the reference for the mapping table with
+`notes` off. `basic.ast.json` is the document `parse` returns for it, with
+every position, and is the reference for the AST shape. Its LinkML output
+(`basic.linkml.yaml`) is added in Milestone 2; the SPEC §5.3 worked example
+is a separate, smaller golden added then as well.
 
 **systems** (`systems.skiss`, `systems.mmd`). A second model, a library
 lending system across three systems, chosen to exercise the corners `basic`
