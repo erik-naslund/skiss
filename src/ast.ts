@@ -59,13 +59,19 @@ export interface ClassNode {
 
 export type Severity = 'error' | 'warning';
 
-/** Codes from the table in docs/ARCHITECTURE.md. `resolve` adds the `W_` codes. */
+/** Codes from the table in docs/ARCHITECTURE.md. `parse` adds the `E_` codes, `resolve` the `W_` codes. */
 export type DiagnosticCode =
   | 'E_UNPARSABLE'
   | 'E_FIELD_WITHOUT_CLASS'
   | 'E_MISSING_TYPE'
   | 'E_UNCLOSED_MANY'
-  | 'E_BAD_NAME';
+  | 'E_BAD_NAME'
+  | 'W_UNKNOWN_TYPE'
+  | 'W_UNDECLARED_CLASS'
+  | 'W_UNDECLARED_FIELD'
+  | 'W_DUPLICATE_CLASS'
+  | 'W_DUPLICATE_FIELD'
+  | 'W_MULTIPLE_IDENTIFIERS';
 
 export interface Diagnostic {
   severity: Severity;
@@ -79,4 +85,10 @@ export interface Diagnostic {
 export interface Document {
   classes: ClassNode[];
   diagnostics: Diagnostic[];
+  /**
+   * Class names referenced by `:`, `~` or `=` but never declared, each once,
+   * in first-reference order and at its first reference's position. Absent
+   * until `resolve` has run; a generator draws these as placeholders.
+   */
+  undeclared?: Name[];
 }

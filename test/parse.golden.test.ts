@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { parse } from '../src/index.ts';
+import { parse, resolve } from '../src/index.ts';
 
 const fixture = (name: string): string =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
@@ -12,6 +12,23 @@ describe('basic.skiss (SPEC §2)', () => {
     expect(doc.diagnostics).toEqual([]);
     const golden = JSON.parse(fixture('basic.ast.json'));
     expect(JSON.parse(JSON.stringify(doc))).toEqual(golden);
+  });
+
+  test('resolves with zero warnings and no undeclared classes', () => {
+    const resolved = resolve(doc);
+    expect(resolved.diagnostics).toEqual([]);
+    expect(resolved.undeclared).toEqual([]);
+  });
+});
+
+describe('systems.skiss (fixtures/README.md)', () => {
+  const doc = parse(fixture('systems.skiss'));
+
+  test('parses with zero diagnostics and resolves with zero warnings', () => {
+    expect(doc.diagnostics).toEqual([]);
+    const resolved = resolve(doc);
+    expect(resolved.diagnostics).toEqual([]);
+    expect(resolved.undeclared).toEqual([]);
   });
 });
 
@@ -27,8 +44,21 @@ describe('broken.skiss (ARCHITECTURE.md diagnostics table)', () => {
     expect(actual).toEqual(expected);
   });
 
-  test('every diagnostic carries a message and a column range', () => {
-    for (const d of doc.diagnostics) {
+  test('resolve yields exactly broken.diagnostics.json: errors and warnings, in line order', () => {
+    const golden = JSON.parse(fixture('broken.diagnostics.json')) as {
+      diagnostics: { code: string; severity: string; line: number }[];
+    };
+    const resolved = resolve(doc);
+    const actual = resolved.diagnostics.map(({ code, severity, line }) => ({
+      code,
+      severity,
+      line,
+    }));
+    expect(actual).toEqual(golden.diagnostics);
+  });
+
+  test('every diagnostic, resolved included, carries a message and a column range', () => {
+    for (const d of resolve(doc).diagnostics) {
       expect(d.message).not.toBe('');
       expect(d.col).toBeTypeOf('number');
       expect(d.end).toBeTypeOf('number');
@@ -62,5 +92,9 @@ describe('broken.skiss (ARCHITECTURE.md diagnostics table)', () => {
       fields: c.fields.map((f) => f.name.text),
     }));
     expect(actual).toEqual(declared);
+
+    // The `<<undeclared>>` placeholders are exactly `undeclared` after resolve.
+    const placeholders = expected.filter((c) => c.undeclared).map((c) => c.name);
+    expect(resolve(doc).undeclared?.map((n) => n.text)).toEqual(placeholders);
   });
 });
