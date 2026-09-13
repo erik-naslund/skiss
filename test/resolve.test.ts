@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { Diagnostic, Document } from '../src/index.ts';
+import type { Diagnostic, Document, ResolvedDocument } from '../src/index.ts';
 import { parse, resolve } from '../src/index.ts';
 
 // Issue #4: the cross-line pass. SPEC §3.2, §3.8, §7 and ADR 0004. The
@@ -51,6 +51,61 @@ describe('resolve is pure and idempotent (AC1)', () => {
     const out = resolve(parse(source));
     expect(JSON.parse(JSON.stringify(out))).toEqual(out);
   });
+
+  test('a deep-frozen input resolves without throwing, to a new, correct document', () => {
+    const doc = deepFreeze(parse(source));
+    const expected = resolve(parse(source));
+    let out: ResolvedDocument | undefined;
+    expect(() => {
+      out = resolve(doc);
+    }).not.toThrow();
+    expect(out).not.toBe(doc);
+    expect(out).toEqual(expected);
+    expect(doc.classes[0]?.fields[1]?.identifier).toBe(true);
+    expect(out?.classes[0]?.fields[1]?.identifier).toBe(false);
+  });
+
+  test('an input wrapped in a Proxy with a get trap resolves without throwing', () => {
+    const doc = deepProxy(parse(source));
+    const expected = resolve(parse(source));
+    let out: ResolvedDocument | undefined;
+    expect(() => {
+      out = resolve(doc);
+    }).not.toThrow();
+    expect(out).not.toBe(doc);
+    expect(out).toEqual(expected);
+    // The output is plain: nothing in it is the wrapper or read through it.
+    expect(JSON.parse(JSON.stringify(out))).toEqual(expected);
+  });
+});
+
+function deepFreeze<T extends object>(value: T): T {
+  for (const v of Object.values(value)) {
+    if (typeof v === 'object' && v !== null) deepFreeze(v);
+  }
+  return Object.freeze(value);
+}
+
+// The shape an editor's reactive store gives a document: every object read
+// through the wrapper is itself wrapped. `structuredClone` throws on it.
+function deepProxy<T extends object>(value: T): T {
+  return new Proxy(value, {
+    get(target, property, receiver) {
+      const v: unknown = Reflect.get(target, property, receiver);
+      return typeof v === 'object' && v !== null ? deepProxy(v) : v;
+    },
+  });
+}
+
+describe('an empty document', () => {
+  test('zero classes resolves to zero diagnostics and an empty `undeclared`', () => {
+    expect(resolve(parse(''))).toEqual({ classes: [], diagnostics: [], undeclared: [] });
+    expect(resolve(parse('# only a comment\n\n'))).toEqual({
+      classes: [],
+      diagnostics: [],
+      undeclared: [],
+    });
+  });
 });
 
 describe('W_UNKNOWN_TYPE (SPEC §3.2, AC3)', () => {
@@ -77,9 +132,30 @@ describe('W_UNKNOWN_TYPE (SPEC §3.2, AC3)', () => {
     );
   });
 
+  test('on equal distance the candidate sharing the longest prefix wins', () => {
+    // `flt` is two edits from both `int` and `float`; the shared `fl` decides.
+    expect(warnings(resolve(parse('Ship\n  mass: flt')))[0]?.message).toBe(
+      'unknown type `flt`, did you mean `float`?',
+    );
+    expect(warnings(resolve(parse('Ship\n  mass: flot')))[0]?.message).toBe(
+      'unknown type `flot`, did you mean `float`?',
+    );
+    // `booln` is one edit from `bool` and two from `boolean`: distance wins.
+    expect(warnings(resolve(parse('Ship\n  ok: booln')))[0]?.message).toBe(
+      'unknown type `booln`, did you mean `bool`?',
+    );
+  });
+
   test('says the field is treated as string when nothing is close', () => {
     expect(warnings(resolve(parse('Ship\n  n: kilograms')))[0]?.message).toBe(
       'unknown type `kilograms`, treated as `string`',
+    );
+    // `xyz` is three edits from `int` and `uri`: outside the limit, no suggestion.
+    expect(warnings(resolve(parse('Ship\n  n: xyz')))[0]?.message).toBe(
+      'unknown type `xyz`, treated as `string`',
+    );
+    expect(warnings(resolve(parse('Ship\n  n: inte')))[0]?.message).toBe(
+      'unknown type `inte`, did you mean `int`?',
     );
   });
 
@@ -153,6 +229,20 @@ describe('W_UNDECLARED_CLASS and `undeclared` (SPEC §3.2, AC4)', () => {
     const out = resolve(parse('A ~ A\n  id*\n'));
     expect(out.diagnostics).toEqual([]);
     expect(out.undeclared).toEqual([]);
+  });
+
+  test('`: Self` and `= Self.x` on the class itself are declared references', () => {
+    const out = resolve(
+      parse('Node\n  id*\n  parent: Node\n  children: Node[]\n  root = Node.id\n'),
+    );
+    expect(out.diagnostics).toEqual([]);
+    expect(out.undeclared).toEqual([]);
+  });
+
+  test('`= Self.x` where the class itself has no x is W_UNDECLARED_FIELD only', () => {
+    expect(codes(resolve(parse('Node\n  id*\n  root = Node.key\n')))).toEqual([
+      'W_UNDECLARED_FIELD',
+    ]);
   });
 });
 

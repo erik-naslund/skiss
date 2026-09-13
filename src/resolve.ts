@@ -6,13 +6,32 @@
 // produces warnings only, never removes a node or a diagnostic, never throws,
 // and never touches its input.
 
-import type { ClassNode, Diagnostic, DiagnosticCode, Document, FieldNode, Name } from './ast.ts';
+import type {
+  ClassNode,
+  Diagnostic,
+  DiagnosticCode,
+  Document,
+  FieldNode,
+  JoinRef,
+  Name,
+  TypeRef,
+} from './ast.ts';
 
-export function resolve(doc: Document): Document {
+/** What `resolve` returns: a `Document` whose `undeclared` list is always present. */
+export interface ResolvedDocument extends Document {
+  undeclared: Name[];
+}
+
+export function resolve(doc: Document): ResolvedDocument {
   // A deep copy, so nothing in the output is shared with the input and the
   // identifier flags below can be cleared without mutating it (AC1).
-  const classes = doc.classes.map((c) => structuredClone(c));
-  const out: Document = { classes, diagnostics: doc.diagnostics.map((d) => ({ ...d })) };
+  const out: ResolvedDocument = {
+    ...doc,
+    classes: doc.classes.map(copyClass),
+    diagnostics: doc.diagnostics.map((d) => ({ ...d })),
+    undeclared: [],
+  };
+  const classes = out.classes;
 
   const declared = new Set(classes.map((c) => c.name.text));
   const warnings: Diagnostic[] = [];
@@ -124,13 +143,56 @@ export function resolve(doc: Document): Document {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// The copy is written out for the known AST shape rather than done with
+// `structuredClone`: that throws on a document an editor has wrapped in a
+// Proxy (a reactive store) or on a node carrying a function, and `resolve`
+// must never throw. Spreads read through a Proxy's traps and off a frozen
+// object alike.
+
+const copyName = (n: Name): Name => ({ ...n });
+
+function copyType(t: TypeRef): TypeRef {
+  switch (t.kind) {
+    case 'primitive':
+      return { ...t, written: copyName(t.written) };
+    case 'class':
+    case 'unknown':
+      return { ...t, name: copyName(t.name) };
+    case 'enum':
+      return { ...t, values: t.values.map(copyName) };
+  }
+}
+
+const copyJoin = (j: JoinRef): JoinRef => ({
+  className: copyName(j.className),
+  fieldName: copyName(j.fieldName),
+});
+
+function copyField(f: FieldNode): FieldNode {
+  const out: FieldNode = { ...f, name: copyName(f.name) };
+  if (f.type !== undefined) out.type = copyType(f.type);
+  if (f.joinsTo !== undefined) out.joinsTo = copyJoin(f.joinsTo);
+  return out;
+}
+
+function copyClass(c: ClassNode): ClassNode {
+  const out: ClassNode = { ...c, name: copyName(c.name), fields: c.fields.map(copyField) };
+  if (c.system !== undefined) out.system = copyName(c.system);
+  if (c.similarTo !== undefined) out.similarTo = copyName(c.similarTo);
+  return out;
+}
+
 const key = (d: Diagnostic): string =>
   [d.severity, d.code, d.line, d.col, d.end, d.message].join(' ');
 
 // ---------------------------------------------------------------------------
 // Suggestions for unknown types (AC3): the closest accepted type word within
-// Levenshtein distance 2. Primitives first, then the aliases, so a tie goes to
-// the canonical name. Working default D4: inline, no dependency.
+// Levenshtein distance 2. On equal distance the candidate sharing the longest
+// prefix with the typed word wins (`flt` is `float`, not `int`); sharing the
+// first letter is the prefix rule at length one, so it needs no extra step.
+// Primitives come before the aliases in the list so a tie that survives goes
+// to the canonical name. Working default D4: inline, no dependency.
 
 const TYPE_WORDS = [
   'string',
@@ -145,17 +207,29 @@ const TYPE_WORDS = [
   'boolean',
 ];
 
+const MAX_DISTANCE = 2;
+
 function closestTypeWord(word: string): string | undefined {
   let best: string | undefined;
-  let bestDistance = 3;
+  let bestDistance = MAX_DISTANCE + 1;
+  let bestPrefix = -1;
   for (const candidate of TYPE_WORDS) {
     const distance = levenshtein(word, candidate);
-    if (distance < bestDistance) {
+    if (distance > MAX_DISTANCE || distance > bestDistance) continue;
+    const prefix = commonPrefixLength(word, candidate);
+    if (distance < bestDistance || prefix > bestPrefix) {
       best = candidate;
       bestDistance = distance;
+      bestPrefix = prefix;
     }
   }
   return best;
+}
+
+function commonPrefixLength(a: string, b: string): number {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
 }
 
 /** Edit distance with unit insert, delete and substitute costs. */
