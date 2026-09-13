@@ -1,0 +1,74 @@
+name: Release
+
+# Publishes the package to npm when a version tag is pushed (docs/RELEASING.md).
+# On pull requests that touch this file the same job runs `npm publish --dry-run`
+# instead, so CI proves the packed contents before a tag ever exists.
+on:
+  push:
+    tags: ['v*.*.*']
+  pull_request:
+    paths: ['.github/workflows/release.yml']
+
+permissions:
+  contents: read
+  id-token: write # npm provenance attestation
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm (version from packageManager)
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node 22 with the npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - run: pnpm build
+
+      - name: Check that the tag matches package.json
+        if: github.event_name == 'push'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Check the packed contents
+        # The tarball must hold dist/, package.json, README.md and LICENSE, nothing else.
+        run: |
+          files="$(npm pack --dry-run --json | node -p '
+            JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map((f) => f.path).join("\n")
+          ')"
+          echo "$files"
+          bad="$(echo "$files" | grep -Ev '^(dist/.+|package\.json|README\.md|LICENSE)$' || true)"
+          if [ -n "$bad" ]; then
+            echo "::error::unexpected files in the package tarball:"
+            echo "$bad"
+            exit 1
+          fi
+          for required in dist/index.js dist/index.d.ts dist/cli.js dist/cli.d.ts package.json README.md LICENSE; do
+            if ! echo "$files" | grep -qx "$required"; then
+              echo "::error::$required is missing from the package tarball"
+              exit 1
+            fi
+          done
+
+      - name: Publish (dry run)
+        if: github.event_name == 'pull_request'
+        run: npm publish --dry-run --access public
+
+      - name: Publish
+        if: github.event_name == 'push'
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
