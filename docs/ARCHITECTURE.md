@@ -48,7 +48,7 @@ Document (AST) + warnings
    └─▶ toMermaid()   → Mermaid classDiagram text
 ```
 
-`parse` and `resolve` are separate on purpose. Parsing is line-local and always succeeds for the lines it can read. Resolving is where anything that needs two lines happens, and it only ever adds warnings ([ADR 0004](adr/0004-line-based-parsing-and-diagnostics.md)).
+`parse` and `resolve` are separate on purpose. Parsing is line-local and always succeeds for the lines it can read. The one piece of state `parse` carries between lines is which class is current, so a field can attach to it and a field before any class can be reported; no line changes how another line is *read*. Resolving is where anything that needs two lines happens, and it only ever adds warnings ([ADR 0004](adr/0004-line-based-parsing-and-diagnostics.md)).
 
 Generators return data where the target is structured. `toLinkML` returns a plain object; YAML is a separate step ([ADR 0006](adr/0006-generators-return-data.md)).
 
@@ -114,7 +114,7 @@ Checked against a real Mermaid parser. The three surprises are marked.
 | `@System` on a class | `<<System>>` as the first line of the class body (Mermaid displays it lowercased in guillemets) |
 | field without a type | `+name` |
 | field with a type | `+int name`, `+Planet homeworld`, `+Film[] films`, `+arid\|temperate climate`, `+red\|green[] tags`. The Skiss type text is used verbatim, unknown types included. |
-| `*` | `*` replaces the `+` visibility marker: `*id`, `*string slug`. **A trailing `*` is Mermaid's abstract-member marker and disappears.** |
+| `*` | `*` replaces the `+` visibility marker: `*id` for an untyped identifier, `*int code` for a typed one. **A trailing `*` is Mermaid's abstract-member marker and disappears.** |
 | `@System` on a field | appended to the member: `+int popularityRank @Community` |
 | `: OtherClass` | `A --> B : fieldName` |
 | `: OtherClass[]` | `A "1" --> "*" B : fieldName` |
