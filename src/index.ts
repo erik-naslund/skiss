@@ -11,5 +11,6 @@ export type {
   TypeRef,
 } from './ast.ts';
 export { parse } from './parse.ts';
+export { resolve } from './resolve.ts';
 
 export const VERSION = '0.0.0';

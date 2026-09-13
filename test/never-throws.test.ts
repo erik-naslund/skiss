@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { parse } from '../src/index.ts';
+import { parse, resolve } from '../src/index.ts';
 
-// SPEC §7 and ADR 0004: `parse` never throws and never returns nothing.
+// SPEC §7 and ADR 0004: `parse` and `resolve` never throw and never return
+// nothing.
 // A seeded generator keeps the 1000 inputs reproducible.
 
 function mulberry32(seed: number): () => number {
@@ -33,6 +34,15 @@ const CODES = new Set([
   'E_MISSING_TYPE',
   'E_UNCLOSED_MANY',
   'E_BAD_NAME',
+]);
+
+const WARNING_CODES = new Set([
+  'W_UNKNOWN_TYPE',
+  'W_UNDECLARED_CLASS',
+  'W_UNDECLARED_FIELD',
+  'W_DUPLICATE_CLASS',
+  'W_DUPLICATE_FIELD',
+  'W_MULTIPLE_IDENTIFIERS',
 ]);
 
 describe('parse never throws (SPEC §7, ADR 0004)', () => {
@@ -84,6 +94,33 @@ describe('parse never throws (SPEC §7, ADR 0004)', () => {
         for (const f of c.fields) expect(f.line).toBeGreaterThan(c.line);
       }
       expect(JSON.parse(JSON.stringify(doc))).toEqual(doc);
+    }
+  });
+});
+
+describe('resolve never throws (SPEC §7, ADR 0004)', () => {
+  test('1000 random parses: no throw, errors kept, warnings with known codes, idempotent', () => {
+    const random = mulberry32(20260914);
+    const pick = (n: number) => Math.floor(random() * n);
+    for (let i = 0; i < 1000; i++) {
+      const length = pick(240);
+      let s = '';
+      for (let j = 0; j < length; j++) s += ALPHABET[pick(ALPHABET.length)];
+      const doc = parse(s);
+      const snapshot = JSON.parse(JSON.stringify(doc));
+      const out = resolve(doc);
+      expect(doc).toEqual(snapshot);
+      expect(out.diagnostics.filter((d) => d.severity === 'error')).toEqual(doc.diagnostics);
+      expect(out.classes.length).toBe(doc.classes.length);
+      let previous = 0;
+      for (const d of out.diagnostics) {
+        expect(d.severity === 'error' ? CODES.has(d.code) : WARNING_CODES.has(d.code)).toBe(true);
+        expect(d.line).toBeGreaterThanOrEqual(previous);
+        previous = d.line;
+      }
+      expect(Array.isArray(out.undeclared)).toBe(true);
+      expect(JSON.parse(JSON.stringify(out))).toEqual(out);
+      expect(resolve(out)).toEqual(out);
     }
   });
 });
