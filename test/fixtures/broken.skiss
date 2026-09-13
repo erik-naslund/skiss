@@ -1,0 +1,40 @@
+# E_FIELD_WITHOUT_CLASS: a field indented under nothing
+  orphan
+
+Ship @Fleet                             # a vessel in the registry
+  id*
+  name
+# E_MISSING_TYPE: a colon with nothing after it
+  crew:
+# E_UNCLOSED_MANY: an opening bracket that is never closed
+  pilots: Person[
+# W_UNKNOWN_TYPE: a misspelled primitive
+  crewSize: itn
+# W_MULTIPLE_IDENTIFIERS: a second identifier in the same class
+  registration*
+# W_DUPLICATE_FIELD: the same field name twice in one class
+  name
+  captain: Person
+
+Person @Crew
+  id*
+  name
+# E_UNPARSABLE: modifiers out of order
+  rank @Crew: string
+# E_BAD_NAME: a field name that is not lowerCamelCase
+  HomePort
+  ships: Ship[]
+
+# E_BAD_NAME: a class name that is not UpperCamelCase
+port @Registry
+
+# W_UNDECLARED_CLASS: a mapping to a class that does not exist
+Vessel @Registry ~ Ghost
+  id*
+  shipId = Ship.id
+# W_UNDECLARED_FIELD: a join to a field the class does not have
+  captainName = Person.fullName
+
+# W_DUPLICATE_CLASS: a class declared twice
+Person @Registry
+  email

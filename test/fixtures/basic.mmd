@@ -1,0 +1,42 @@
+classDiagram
+  class Character {
+    <<Catalog>>
+    *id
+    +name
+    +Planet homeworld
+    +Film[] films
+    +int popularityRank @Community
+  }
+  class Planet {
+    <<Catalog>>
+    *id
+    +name
+    +arid|temperate|frozen|unknown climate
+  }
+  class Film {
+    <<Catalog>>
+    *id
+    +title
+    +date releasedOn
+    +Character[] characters
+  }
+  class Starship {
+    <<Catalog>>
+    *id
+    +name
+    +int crewSize
+    +Character[] pilots
+  }
+  class CharacterPage {
+    <<Community>>
+    *slug
+    +characterId
+    +summary
+    +int editCount
+  }
+  Character --> Planet : homeworld
+  Character "1" --> "*" Film : films
+  Film "1" --> "*" Character : characters
+  Starship "1" --> "*" Character : pilots
+  CharacterPage ..> Character : similar
+  CharacterPage ..> Character : characterId = id

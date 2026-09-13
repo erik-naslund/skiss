@@ -1,0 +1,48 @@
+classDiagram
+  class Book {
+    <<Catalog>>
+    *isbn
+    +title
+    +hardback|paperback|audio format
+    +available|loaned|lost status
+    +Author author
+    +fiction|history|science[] subjects
+    +integer pageCount
+  }
+  class Author {
+    <<Catalog>>
+    *id
+    +name
+    +date born
+    +Book[] books
+  }
+  class Loan {
+    <<Circulation>>
+    +Book book
+    +Member member
+    +date dueOn
+    +boolean overdue
+    +open|returned status
+  }
+  class Member {
+    <<Circulation>>
+    *id
+    +name
+    +email
+    +Loan[] loans
+    +boolean newsletter @Website
+  }
+  class BookListing {
+    <<Website>>
+    *slug
+    +bookIsbn
+    +blurb
+    +int hits
+  }
+  Book --> Author : author
+  Author "1" --> "*" Book : books
+  Loan --> Book : book
+  Loan --> Member : member
+  Member "1" --> "*" Loan : loans
+  BookListing ..> Book : similar
+  BookListing ..> Book : bookIsbn = isbn
