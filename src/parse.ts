@@ -27,9 +27,12 @@ import type {
 const isWs = (c: string | undefined): boolean => c === ' ' || c === '\t';
 const trimWs = (s: string): string => s.replace(/^[ \t]+/, '').replace(/[ \t]+$/, '');
 
-const CLASS_NAME = /^[A-Z][A-Za-z0-9]*$/;
-const FIELD_NAME = /^[a-z][A-Za-z0-9]*$/;
-const SYSTEM_OR_VALUE = /^[A-Za-z][A-Za-z0-9_-]*$/;
+// SPEC §4: the name productions. Exported because a projection from LinkML
+// has to know what it may write (SPEC §8, Names), and one grammar in one
+// place is the point of the parser owning them.
+export const CLASS_NAME = /^[A-Z][A-Za-z0-9]*$/;
+export const FIELD_NAME = /^[a-z][A-Za-z0-9]*$/;
+export const SYSTEM_OR_VALUE = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 /**
  * SPEC §3.2: the primitives and the aliases that name them. The one table;

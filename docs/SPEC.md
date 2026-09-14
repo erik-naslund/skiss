@@ -356,23 +356,55 @@ A parser never throws and never returns nothing. It returns whatever it could re
 
 ## 8. Reading LinkML into Skiss
 
-*Designed, not built.*
+A LinkML schema can be projected into Skiss so it can be read and discussed as a sketch. The projection is the inverse of §5.1 wherever §5.1 has an inverse, and a report of what it could not carry everywhere else. It never fails: a schema it cannot read at all projects to an empty sketch and a report that says why.
 
-A LinkML schema can be projected into Skiss so it can be read and discussed as a sketch.
+### Element mapping
 
-**Maps cleanly:** classes, attributes, `range`, `multivalued`, `identifier`, `description`, `close_mappings`, and Skiss's own annotations. Global slots are flattened into the classes that use them. Enums are inlined when used in exactly one place.
+| LinkML | Skiss |
+|---|---|
+| a class | a class line |
+| a class annotated `undeclared: true` | nothing: it is the stub a reference left behind (§5.1) |
+| the class's `attributes`, then the schema `slots` the class lists, in that order | fields |
+| `identifier: true` | `*` |
+| `range` naming a class of the schema, or any other capitalised name | a class reference |
+| `range` naming an enum of the schema | an inline enum, its `permissible_values` keys in order |
+| `integer`; `float`, `double`, `decimal`; `boolean`; `date`; `datetime`; `uri`, `uriorcurie` | `int`, `float`, `bool`, `date`, `datetime`, `uri` |
+| `string`, or no `range` where `default_range` is `string` | no type |
+| any other LinkML type (`time`, `curie`, `ncname`, …) | the word as written, lowercase, which reads as an unknown type (§3.2) and falls back to `string` |
+| `multivalued: true` | `[]` |
+| `description` | `#`, its newlines replaced by spaces |
+| `annotations: {system: S}` | `@S` |
+| `annotations: {note: text}` | `? text` |
+| `annotations: {joins_to: Class.field}` | `= Class.field` |
+| `close_mappings: [prefix:Class]` | `~ Class`, from the first entry, its prefix stripped |
 
-**Does not map:** `slot_usage`, patterns, units, constraints, mixins, `unique_keys`, `is_a`.
+**Names.** Skiss cannot read a class name that is not `UpperCamelCase` or a field name that is not `lowerCamelCase`, so `page_count` and `Page-Count` are converted rather than kept, and every conversion is reported. A reference is converted with the name it points at. Two names that converge take a number: `PageCount`, `PageCount2`.
 
-The projection reports what it dropped, never silently:
+**Enums.** Skiss has no named enums, so an enum is inlined at every attribute whose range it is and its name is not carried. An enum used by exactly one attribute is inlined and nothing is reported. An enum used by several is inlined in each of them, and is reported when the inlining loses the sharing: when §5.1 would not rebuild one enum from the result, because the attributes do not all have one name, or because another attribute of that name carries different values. A permissible value with a body of its own — a `description`, a `meaning`, anything else — is inlined by its key and its body is reported, as is any key on the enum other than `permissible_values`. An enum Skiss cannot write, one with fewer than two values (§3.4) or with a value that is not a Skiss value (§4), is not inlined at all: the attribute keeps no type, and the enum is reported.
+
+### The report
+
+Everything the table does not carry is reported, never dropped silently: `is_a`, `mixins`, `slot_usage`, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported; any other key at schema level is reported once.
+
+The reports are counted, grouped by kind, and written as one line in schema order:
 
 ```
 Dropped: is_a on 4 classes, 3 patterns, 2 mixins, slot_usage on 7 slots.
 ```
 
-Round-tripping is asymmetric: Skiss → LinkML → Skiss is identity; LinkML → Skiss → LinkML is lossy unless the original is retained.
+Converted names and inlined enums are further sentences of the same line:
+
+```
+Dropped: pattern on 1 slot. Renamed: 6 names. Inlined: 1 enum.
+```
+
+A projection that dropped nothing reports an empty line, not a line saying that nothing was dropped.
+
+**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity for every document LinkML carries whole. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
 
 ### 8.1 Editing a projected schema
+
+*Designed, not built.*
 
 An editor may present a LinkML schema as Skiss, accept edits, and merge them back so that everything Skiss cannot express survives untouched. This requires:
 
