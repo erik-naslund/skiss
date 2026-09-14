@@ -146,17 +146,17 @@ describe('SPEC §5.2, an empty document', () => {
     });
   });
 
-  test('a normalised name that is empty or starts with a digit takes a `_` (AC4, review B4)', () => {
+  test('a name that starts with a digit takes a `_`; one with no letters or digits becomes `schema` (AC4, review B4)', () => {
     for (const [given, expected] of [
       ['2024-inventory', '_2024_inventory'],
       ['123', '_123'],
-      ['', '_'],
+      ['', 'schema'],
+      ['---', 'schema'],
     ]) {
       const named = schema('', given);
-      // LinkML rejects a name that does not match `^[a-zA-Z_][\w.-]*$`. The
-      // empty name normalises to the bare `_`, which is a valid name but not
-      // a usable prefix: RDF reserves `_` for blank nodes, so `gen-python`
-      // rejects `default_prefix: _`. Reported on PR #30, not decided here.
+      // LinkML rejects a name that does not match `^[a-zA-Z_][\w.-]*$`, and
+      // the schema name is also its prefix, which RDF forbids to be the bare
+      // `_` (blank nodes). Decided by the tech lead on PR #30.
       expect(named.name).toBe(expected);
       expect(named.default_prefix).toBe(expected);
       expect(named.id).toBe(`https://example.org/${expected}`);

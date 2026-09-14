@@ -347,9 +347,14 @@ function rangeOf(
  * must match `^[a-zA-Z_][\w.-]*$`, so a result that is empty or starts with a
  * digit (`2024-inventory.skiss`, `123.skiss`) takes a leading underscore.
  */
+// A valid LinkML name matches `^[a-zA-Z_][\w.-]*$`, and a schema name is
+// also its prefix, which RDF forbids to be the bare `_` (blank nodes). So a
+// name with no letters or digits at all becomes `schema`, and one that starts
+// with a digit gets a `_` in front.
 const linkmlName = (text: string): string => {
   const name = text.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  return name === '' || /^[0-9]/.test(name) ? `_${name}` : name;
+  if (!/[a-z0-9]/.test(name)) return 'schema';
+  return /^[0-9]/.test(name) ? `_${name}` : name;
 };
 
 const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
