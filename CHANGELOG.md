@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-14
+
+Skiss to LinkML from the command line. The `0.1.0` tarball on npm was built
+from a commit that already carried these changes; `0.2.0` is the version that
+names them.
+
 ### Added
 
 - `compile(source, { target: 'linkml', schemaName, format })`: the LinkML
@@ -15,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `skiss compile <file> [-o path] [--json] [--name schemaName] [--strict]`,
   `-` for standard input, diagnostics on standard error. `--name` defaults to
   the file's basename without its extension, or `sketch` for standard input.
+
+### Changed
+
+- Releases publish to npm with trusted publishing; no token is stored.
+- CI: the Node job no longer builds a LinkML environment, and the CLI tests
+  build `dist/` once in a vitest global setup.
 
 ## [0.1.0] - 2026-09-14
 
