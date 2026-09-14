@@ -146,12 +146,12 @@ describe('SPEC §5.2, an empty document', () => {
     });
   });
 
-  test('a name that starts with a digit takes a `_`; one with no letters or digits becomes `schema` (AC4, review B4)', () => {
+  test('a name that starts with a digit takes a `_`; one with no letters or digits becomes `sketch` (AC4, review B4)', () => {
     for (const [given, expected] of [
       ['2024-inventory', '_2024_inventory'],
       ['123', '_123'],
-      ['', 'schema'],
-      ['---', 'schema'],
+      ['', 'sketch'],
+      ['---', 'sketch'],
     ]) {
       const named = schema('', given);
       // LinkML rejects a name that does not match `^[a-zA-Z_][\w.-]*$`, and
@@ -162,6 +162,31 @@ describe('SPEC §5.2, an empty document', () => {
       expect(named.id).toBe(`https://example.org/${expected}`);
       expect(named.prefixes[named.default_prefix]).toBe(`https://example.org/${expected}/`);
     }
+  });
+
+  test('a name that is a prefix `linkml:types` binds takes a trailing `_` (PR #33 review)', () => {
+    // `linkml:types` binds `schema` to schema.org (and `linkml`, `xsd`, `shex`);
+    // `gen-python` refuses a schema that binds one of them to anything else.
+    const cases: [string, string][] = [
+      ['schema', 'schema_'],
+      ['Schema', 'schema_'],
+      ['xsd', 'xsd_'],
+      ['shex', 'shex_'],
+      ['linkml', 'linkml_'],
+    ];
+    for (const [given, expected] of cases) {
+      const named = schema('', given);
+      expect(named.name).toBe(expected);
+      expect(named.default_prefix).toBe(expected);
+      expect(named.prefixes[expected]).toBe(`https://example.org/${expected}/`);
+    }
+    expect(schema('', 'linkml').prefixes.linkml).toBe('https://w3id.org/linkml/');
+  });
+
+  test('a system named after a prefix `linkml:types` binds takes a trailing `_` too', () => {
+    const named = schema('Ship @Schema\n  id*\n', 'sketch');
+    expect(named.prefixes.schema_).toBe('https://example.org/system/schema_/');
+    expect(Object.hasOwn(named.prefixes, 'schema')).toBe(false);
   });
 
   test('a schema name that is an `Object.prototype` key still has a prefix (review B3)', () => {

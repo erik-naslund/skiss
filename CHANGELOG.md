@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `skiss compile` command:
   `skiss compile <file> [-o path] [--json] [--name schemaName] [--strict]`,
   `-` for standard input, diagnostics on standard error. `--name` defaults to
-  the file's basename without its extension, or `schema` for standard input.
+  the file's basename without its extension, or `sketch` for standard input.
 
 ## [0.1.0] - 2026-09-14
 

@@ -163,7 +163,7 @@ describe.each(LINKML_FIXTURES)(
     });
 
     test('`-` reads standard input; diagnostics name it <stdin>', () => {
-      // The schema name of a stdin document defaults to `schema`, so the
+      // The schema name of a stdin document defaults to `sketch`, so the
       // golden's name has to be given for the output to be comparable.
       const r = skiss(['compile', '-', '--name', schemaName], fixture(`${name}.skiss`));
       expect(r.stdout).toBe(fixture(`${name}.linkml.yaml`));
@@ -193,10 +193,12 @@ describe('skiss compile --name (AC2)', () => {
     expect(r.stdout).toContain('name: spec_example\n');
   });
 
-  test('the schema name of standard input defaults to `schema`', () => {
+  test('the schema name of standard input defaults to `sketch`', () => {
+    // Not `schema`: `linkml:types` binds that prefix to schema.org, and LinkML
+    // rejects a schema that binds it to anything else.
     const r = skiss(['compile', '-'], fixture('basic.skiss'));
     expect(r.status).toBe(0);
-    expect(r.stdout).toContain('name: schema\n');
+    expect(r.stdout).toContain('name: sketch\n');
   });
 });
 

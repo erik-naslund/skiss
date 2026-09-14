@@ -343,15 +343,25 @@ function rangeOf(
 // ---------------------------------------------------------------------------
 
 /**
+ * The prefixes `linkml:types` binds. Every schema imports it, and LinkML
+ * refuses a schema that binds one of these to another URI (`gen-python`:
+ * "Prefix: schema mismatch between schema and types"). A schema or system
+ * name that lands on one takes a trailing underscore instead.
+ */
+const RESERVED_PREFIXES = new Set(['linkml', 'xsd', 'shex', 'schema']);
+
+/**
  * SPEC §5.2: lowercase, every non-alphanumeric an underscore. A LinkML name
  * must match `^[a-zA-Z_][\w.-]*$`, and the schema name is also its prefix,
  * which RDF forbids to be the bare `_` (blank nodes). So a name with no
- * letters or digits at all becomes `schema`, and one that starts with a digit
- * (`2024-inventory.skiss`) takes a leading underscore.
+ * letters or digits at all becomes `sketch`, one that starts with a digit
+ * (`2024-inventory.skiss`) takes a leading underscore, and one that is a
+ * prefix `linkml:types` already binds (`schema.skiss`) takes a trailing one.
  */
 const linkmlName = (text: string): string => {
   const name = text.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  if (!/[a-z0-9]/.test(name)) return 'schema';
+  if (!/[a-z0-9]/.test(name)) return 'sketch';
+  if (RESERVED_PREFIXES.has(name)) return `${name}_`;
   return /^[0-9]/.test(name) ? `_${name}` : name;
 };
 

@@ -19,7 +19,7 @@ Options:
       --notes          diagram: emit \`? text\` doubts as Mermaid notes
       --json           compile: write the schema as JSON instead of YAML
       --name <name>    compile: the schema name. Defaults to the file's
-                       basename without its extension, or \`schema\` for
+                       basename without its extension, or \`sketch\` for
                        standard input.
       --strict         Exit 1 when the input has any diagnostic
   -h, --help           Show this help and exit
@@ -138,7 +138,7 @@ async function main(argv: string[]): Promise<number> {
  * (SPEC §5.2), so a basename with a dot or a dash in it needs nothing here.
  */
 const defaultSchemaName = (file: string): string =>
-  file === '-' ? 'schema' : basename(file, extname(file));
+  file === '-' ? 'sketch' : basename(file, extname(file));
 
 async function readSource(file: string): Promise<string> {
   try {
