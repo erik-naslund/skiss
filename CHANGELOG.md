@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-14
+
+LinkML to Skiss. An existing schema becomes a sketch you can put in front of
+people, and the projection says what it could not carry.
+
 ### Added
 
 - `toSkiss(document)` prints a `Document` as canonical Skiss text: the notation
