@@ -22,7 +22,14 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # The runner has python3, so `pnpm verify` would build its own .venv and
+      # validate the fixtures a second time. The LinkML job below is the one
+      # place CI does that (issue #29).
       - run: pnpm verify
+        env:
+          SKISS_SKIP_LINKML: '1'
+
       - run: pnpm build
 
   linkml:

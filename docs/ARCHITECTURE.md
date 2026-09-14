@@ -156,7 +156,9 @@ Golden-file comparison. When output changes on purpose, the diff is the review (
 CI runs two jobs:
 
 1. **Node**: lint, typecheck, unit and golden tests.
-2. **Python**: installs `linkml` and validates every generated `*.linkml.yaml` fixture with the real LinkML toolchain. This is the only proof that "compiles to valid LinkML" is true.
+2. **LinkML**: installs `linkml` and validates every generated `*.linkml.yaml` fixture with the real LinkML toolchain. This is the only proof that "compiles to valid LinkML" is true.
+
+The split is exact: the Node job runs `pnpm verify` with `SKISS_SKIP_LINKML=1`, so it never builds a Python environment, and the `LinkML` job is the only place CI validates the fixtures. Locally, and in the release workflow, `pnpm verify` runs all four gates.
 
 ## Toolchain
 
