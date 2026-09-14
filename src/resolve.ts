@@ -16,6 +16,7 @@ import type {
   Name,
   TypeRef,
 } from './ast.ts';
+import { PRIMITIVES } from './parse.ts';
 
 /** What `resolve` returns: a `Document` whose `undeclared` list is always present. */
 export interface ResolvedDocument extends Document {
@@ -46,7 +47,14 @@ export function resolve(doc: Document): ResolvedDocument {
   const reference = (name: Name): boolean => {
     if (declared.has(name.text)) return true;
     if (!undeclared.has(name.text)) undeclared.set(name.text, name);
-    warn('W_UNDECLARED_CLASS', `class \`${name.text}\` is not declared`, name);
+    // A capitalised primitive (`players: Int`) is read as a class by SPEC
+    // §3.2, so the warning names the primitive the reader meant. The
+    // reference itself is untouched: the fallback is still a placeholder.
+    // `Object.hasOwn` and not a plain lookup: `Constructor` would otherwise
+    // find `Object.prototype.constructor` and be hinted.
+    const lower = name.text.toLowerCase();
+    const hint = Object.hasOwn(PRIMITIVES, lower) ? `. Did you mean \`${lower}\`?` : '';
+    warn('W_UNDECLARED_CLASS', `class \`${name.text}\` is not declared${hint}`, name);
     return false;
   };
 
@@ -192,21 +200,11 @@ const key = (d: Diagnostic): string =>
 // Levenshtein distance 2. On equal distance the candidate sharing the longest
 // prefix with the typed word wins (`flt` is `float`, not `int`); sharing the
 // first letter is the prefix rule at length one, so it needs no extra step.
-// Primitives come before the aliases in the list so a tie that survives goes
-// to the canonical name. Working default D4: inline, no dependency.
+// Primitives come before the aliases in the parser's table so a tie that
+// survives goes to the canonical name. Working default D4: inline, no
+// dependency.
 
-const TYPE_WORDS = [
-  'string',
-  'int',
-  'float',
-  'bool',
-  'date',
-  'datetime',
-  'uri',
-  'text',
-  'integer',
-  'boolean',
-];
+const TYPE_WORDS = Object.keys(PRIMITIVES);
 
 const MAX_DISTANCE = 2;
 

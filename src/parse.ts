@@ -31,7 +31,11 @@ const CLASS_NAME = /^[A-Z][A-Za-z0-9]*$/;
 const FIELD_NAME = /^[a-z][A-Za-z0-9]*$/;
 const SYSTEM_OR_VALUE = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
-const PRIMITIVES: Record<string, Primitive> = {
+/**
+ * SPEC §3.2: the primitives and the aliases that name them. The one table;
+ * `resolve` reads it for its type suggestions rather than keeping a second.
+ */
+export const PRIMITIVES: Record<string, Primitive> = {
   string: 'string',
   int: 'int',
   float: 'float',
