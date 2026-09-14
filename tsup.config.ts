@@ -8,7 +8,9 @@ const shared: Options = {
   target: 'es2022',
 };
 
-export default defineConfig([
+// Named and typed so test/global-setup.ts builds exactly these options through
+// tsup's `build()` API instead of duplicating them (issue #28, AC1).
+export const entries: Options[] = [
   {
     ...shared,
     entry: { index: 'src/index.ts' },
@@ -20,4 +22,6 @@ export default defineConfig([
     // The `skiss` binary must be directly executable (issue #1, AC3).
     banner: { js: '#!/usr/bin/env node' },
   },
-]);
+];
+
+export default defineConfig(entries);

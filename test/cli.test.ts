@@ -1,5 +1,5 @@
-import { execSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,10 +33,13 @@ function skiss(args: string[], input?: string): Run {
 let tmp: string;
 
 beforeAll(() => {
-  // The test builds, so `pnpm verify` needs nothing before `pnpm test`.
-  execSync('pnpm build', { cwd: root, stdio: 'pipe' });
+  // Issue #28, AC2: the build belongs to test/global-setup.ts, which runs once
+  // before any worker. This test only runs the binary it left behind.
+  if (!existsSync(cli)) {
+    throw new Error(`${cli} is missing: test/global-setup.ts builds it before any test runs`);
+  }
   tmp = mkdtempSync(join(tmpdir(), 'skiss-cli-'));
-}, 60_000);
+});
 
 afterAll(() => {
   rmSync(tmp, { recursive: true, force: true });
