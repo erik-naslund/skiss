@@ -1,0 +1,58 @@
+id: https://example.org/broken
+name: broken
+default_prefix: broken
+default_range: string
+prefixes:
+  linkml: https://w3id.org/linkml/
+  broken: https://example.org/broken/
+  fleet: https://example.org/system/fleet/
+  crew: https://example.org/system/crew/
+  registry: https://example.org/system/registry/
+imports:
+  - linkml:types
+
+classes:
+
+  Ship:
+    description: a vessel in the registry
+    annotations:
+      system: Fleet
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      crewSize:
+        range: string
+      registration: {}
+      captain:
+        range: Person
+
+  Person:
+    annotations:
+      system: Crew
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      ships:
+        range: Ship
+        multivalued: true
+
+  Vessel:
+    annotations:
+      system: Registry
+    close_mappings:
+      - broken:Ghost
+    attributes:
+      id:
+        identifier: true
+      shipId:
+        annotations:
+          joins_to: Ship.id
+      captainName:
+        annotations:
+          joins_to: Person.fullName
+
+  Ghost:
+    annotations:
+      undeclared: true
