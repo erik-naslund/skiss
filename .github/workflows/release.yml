@@ -3,6 +3,11 @@ name: Release
 # Publishes the package to npm when a version tag is pushed (docs/RELEASING.md).
 # On pull requests that touch this file the same job runs `npm publish --dry-run`
 # instead, so CI proves the packed contents before a tag ever exists.
+#
+# Publishing uses npm trusted publishing: npmjs.com is configured to accept
+# this repository's `release.yml` as a publisher and the job authenticates
+# with a GitHub OIDC token (`id-token: write`). There is no npm token to
+# store or rotate.
 on:
   push:
     tags: ['v*.*.*']
@@ -11,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   release:
@@ -28,6 +34,10 @@ jobs:
           node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or newer; Node 22 ships an older one.
+      - run: npm install -g npm@^11.5.1
+      - run: npm --version
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
@@ -68,6 +78,6 @@ jobs:
 
       - name: Publish
         if: github.event_name == 'push'
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # `--provenance=false` because provenance requires a public source
+        # repository; drop the flag once this repository is public.
+        run: npm publish --access public --provenance=false
