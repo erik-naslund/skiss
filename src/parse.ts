@@ -48,6 +48,17 @@ export const PRIMITIVES: Record<string, Primitive> = {
   boolean: 'bool',
 };
 
+/**
+ * The primitive a type word names, or `undefined` for any other word.
+ *
+ * `Object.hasOwn` and not a plain `PRIMITIVES[word]`: the table is a plain
+ * object, so `constructor`, `toString` and the other `Object.prototype` keys
+ * would find an inherited property and read as a primitive (issue #42).
+ */
+function primitiveFor(word: string): Primitive | undefined {
+  return Object.hasOwn(PRIMITIVES, word) ? PRIMITIVES[word] : undefined;
+}
+
 const FIELD_ORDER = 'name, `*`, `: type`, `@System`, `= Class.field`, then `#` and `?`';
 const CLASS_ORDER = 'name, `@System`, `~ Class`, then `#` and `?`';
 
@@ -507,7 +518,7 @@ function parseType(c: Cursor, colon: Token): Result<TypeRef> {
   }
 
   const word = first.text;
-  const primitive = PRIMITIVES[word];
+  const primitive = primitiveFor(word);
   if (primitive !== undefined) {
     return {
       ok: true,
