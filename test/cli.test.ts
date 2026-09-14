@@ -5,7 +5,16 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type { LinkMLSchema } from '../src/index.ts';
-import { parse, resolve, serialize, toMermaid, VERSION } from '../src/index.ts';
+import {
+  formatDropped,
+  importLinkML,
+  parse,
+  resolve,
+  serialize,
+  toMermaid,
+  toSkiss,
+  VERSION,
+} from '../src/index.ts';
 
 // Issue #6, AC7: the built `dist/cli.js` is run with `node` on every fixture.
 // stdout must equal the `.mmd` fixture, stderr must match
@@ -205,6 +214,119 @@ describe('skiss compile --name (AC2)', () => {
   });
 });
 
+// Issue #47, AC4: the same binary is run on every `.linkml.yaml` fixture, the
+// other direction. The three fixtures LinkML carries whole project back to the
+// sketch they were compiled from; `broken` does not, because the schema is the
+// partial document and not the file (see test/from-linkml.golden.test.ts), and
+// `foreign` is the schema Skiss did not write.
+describe.each(['basic', 'systems', 'spec-example'])(
+  'skiss import test/fixtures/%s.linkml.yaml (AC2, AC4)',
+  (name) => {
+    const file = `test/fixtures/${name}.linkml.yaml`;
+    const projection = (): string => toSkiss(parse(fixture(`${name}.skiss`)));
+
+    test(`stdout is toSkiss(parse(${name}.skiss)), stderr is empty and the exit code is 0`, () => {
+      const r = skiss(['import', file]);
+      expect(r.stdout).toBe(projection());
+      expect(r.stderr).toBe('');
+      expect(r.status).toBe(0);
+    });
+
+    test('`-` reads standard input', () => {
+      const r = skiss(['import', '-'], fixture(`${name}.linkml.yaml`));
+      expect(r.stdout).toBe(projection());
+      expect(r.stderr).toBe('');
+      expect(r.status).toBe(0);
+    });
+
+    test('-o writes the sketch to the path verbatim and nothing to stdout (D1)', () => {
+      const out = join(tmp, `${name}.skiss`);
+      const r = skiss(['import', file, '-o', out]);
+      expect(r.status).toBe(0);
+      expect(r.stdout).toBe('');
+      expect(readFileSync(out, 'utf8')).toBe(projection());
+    });
+
+    test('--strict exits 0 when nothing was dropped and there are no diagnostics', () => {
+      const r = skiss(['import', '--strict', file]);
+      expect(r.stdout).toBe(projection());
+      expect(r.status).toBe(0);
+    });
+  },
+);
+
+describe('skiss import test/fixtures/broken.linkml.yaml (AC4)', () => {
+  const file = 'test/fixtures/broken.linkml.yaml';
+
+  test('stdout is the sketch the library projects, and it is canonical Skiss', () => {
+    const r = skiss(['import', file]);
+    expect(r.stdout).toBe(importLinkML(fixture('broken.linkml.yaml')).output);
+    expect(toSkiss(parse(r.stdout))).toBe(r.stdout);
+    expect(r.status).toBe(0);
+  });
+
+  test('nothing is dropped, and the warnings of the projected sketch are on stderr', () => {
+    const r = skiss(['import', file]);
+    // The sketch still references the classes that were never declared, so
+    // reading it back warns where `broken.skiss` warns.
+    const lines = r.stderr.replace(/\n$/, '').split('\n');
+    expect(lines).toEqual([
+      `${file}:13:20: warning W_UNDECLARED_CLASS class \`Ghost\` is not declared`,
+      `${file}:16:24: warning W_UNDECLARED_FIELD class \`Person\` has no field \`fullName\``,
+    ]);
+  });
+
+  test('--strict exits 1 on the diagnostics alone', () => {
+    expect(skiss(['import', '--strict', file]).status).toBe(1);
+  });
+});
+
+describe('skiss import test/fixtures/foreign.linkml.yaml (AC2, AC4)', () => {
+  const file = 'test/fixtures/foreign.linkml.yaml';
+  const dropped = (): string => formatDropped(JSON.parse(fixture('foreign.dropped.json')));
+
+  test('stdout is foreign.skiss and the exit code is 0', () => {
+    const r = skiss(['import', file]);
+    expect(r.stdout).toBe(fixture('foreign.skiss'));
+    expect(r.status).toBe(0);
+  });
+
+  test('stderr is the SPEC §8 report first, then the diagnostics (D2)', () => {
+    const r = skiss(['import', file]);
+    expect(r.stderr).toBe(
+      `${dropped()}\n${file}:5:13: warning W_UNKNOWN_TYPE unknown type \`time\`, treated as \`string\`\n`,
+    );
+  });
+
+  test('--strict exits 1 when anything was dropped', () => {
+    const r = skiss(['import', '--strict', file]);
+    expect(r.stdout).toBe(fixture('foreign.skiss'));
+    expect(r.status).toBe(1);
+  });
+
+  test('`-` reads standard input; the report and the diagnostics are unchanged', () => {
+    const r = skiss(['import', '-'], fixture('foreign.linkml.yaml'));
+    expect(r.stdout).toBe(fixture('foreign.skiss'));
+    expect(r.stderr).toBe(
+      `${dropped()}\n<stdin>:5:13: warning W_UNKNOWN_TYPE unknown type \`time\`, treated as \`string\`\n`,
+    );
+    expect(r.status).toBe(0);
+  });
+});
+
+describe('skiss import of input that is not a schema (AC1, AC2)', () => {
+  test('a text that is not YAML writes one E_NOT_YAML error and no output', () => {
+    const r = skiss(['import', '-'], 'classes: [\n  unterminated\n');
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toMatch(/^<stdin>:1: error E_NOT_YAML the input is not YAML: .+\n$/);
+    expect(r.status).toBe(0);
+  });
+
+  test('--strict exits 1 on that error', () => {
+    expect(skiss(['import', '--strict', '-'], 'classes: [\n').status).toBe(1);
+  });
+});
+
 describe('help, version and usage errors (AC5)', () => {
   test('`skiss --help` prints help to stdout and exits 0', () => {
     const r = skiss(['--help']);
@@ -249,6 +371,20 @@ describe('help, version and usage errors (AC5)', () => {
 
   test('`compile` without a file exits 2 (issue #24, AC2)', () => {
     expect(skiss(['compile']).status).toBe(2);
+  });
+
+  test('`skiss --help` documents the import subcommand (issue #47, AC3)', () => {
+    const r = skiss(['--help']);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('import <file>');
+  });
+
+  test('`import` without a file exits 2, and an option it does not take exits 2 (AC2)', () => {
+    expect(skiss(['import']).status).toBe(2);
+    const r = skiss(['import', '--json', 'test/fixtures/basic.linkml.yaml']);
+    expect(r.status).toBe(2);
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toContain("Try 'skiss --help'");
   });
 
   test('an option the command does not take exits 2', () => {

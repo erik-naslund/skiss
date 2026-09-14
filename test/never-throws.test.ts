@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import { parse as parseYaml } from 'yaml';
-import { formatDropped, fromLinkML, parse, resolve, serialize, toLinkML } from '../src/index.ts';
+import {
+  formatDropped,
+  fromLinkML,
+  importLinkML,
+  parse,
+  resolve,
+  serialize,
+  toLinkML,
+} from '../src/index.ts';
 import { mulberry32 } from './mulberry32.ts';
 
 // SPEC §7 and ADR 0004: `parse` and `resolve` never throw and never return
@@ -164,6 +172,33 @@ describe('fromLinkML never throws (SPEC §8)', () => {
           ? [{ kind: 'schema', element: 'fuzz', detail: 'the schema has no `classes`' }]
           : [],
       );
+    }
+  });
+});
+
+describe('importLinkML never throws (issue #47, AC1)', () => {
+  test('300 random texts: a sketch that parses, and only diagnostics with known codes', () => {
+    const random = mulberry32(20260916);
+    const pick = (n: number) => Math.floor(random() * n);
+    for (let i = 0; i < 300; i++) {
+      const length = pick(240);
+      let s = '';
+      for (let j = 0; j < length; j++) s += ALPHABET[pick(ALPHABET.length)];
+      const out = importLinkML(s);
+      // Whatever the text was, what it writes is Skiss that parses.
+      expect(parse(out.output).diagnostics).toEqual([]);
+      for (const d of out.diagnostics) {
+        expect(d.code === 'E_NOT_YAML' || CODES.has(d.code) || WARNING_CODES.has(d.code)).toBe(
+          true,
+        );
+      }
+      // A text that is not YAML is that one error and nothing else (AC1).
+      if (out.diagnostics.some((d) => d.code === 'E_NOT_YAML')) {
+        expect(out.output).toBe('');
+        expect(out.dropped).toEqual([]);
+        expect(out.diagnostics).toHaveLength(1);
+      }
+      expect(JSON.parse(JSON.stringify(out))).toEqual(out);
     }
   });
 });

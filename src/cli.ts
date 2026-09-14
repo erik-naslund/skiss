@@ -5,13 +5,15 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { parseArgs } from 'node:util';
-import { compile, formatDiagnostic, VERSION } from './index.ts';
+import type { Diagnostic, Dropped } from './index.ts';
+import { compile, formatDiagnostic, formatDropped, importLinkML, VERSION } from './index.ts';
 
 const HELP = `Usage: skiss <command> [options]
 
 Commands:
   diagram <file>       Write a Mermaid class diagram for a .skiss file.
   compile <file>       Write a LinkML schema for a .skiss file.
+  import <file>        Write Skiss for a LinkML schema file, YAML or JSON.
                        <file> may be - to read standard input.
 
 Options:
@@ -21,12 +23,17 @@ Options:
       --name <name>    compile: the schema name. Defaults to the file's
                        basename without its extension, or \`sketch\` for
                        standard input.
-      --strict         Exit 1 when the input has any diagnostic
+      --strict         Exit 1 when the input has any diagnostic; for import,
+                       also when the projection dropped anything
   -h, --help           Show this help and exit
       --version        Print the version and exit
 
 Diagnostics go to standard error, one per line:
   <file>:<line>:<col>: <severity> <CODE> <message>
+
+import writes what the projection could not carry to standard error too, as
+one line before the diagnostics. Its diagnostics are the ones the sketch it
+wrote has, so their line numbers are lines of that sketch.
 
 Exit codes:
   0  the output was produced
@@ -49,6 +56,7 @@ const EXIT_INTERNAL = 70;
 const COMMANDS = {
   diagram: ['output', 'notes', 'strict'],
   compile: ['output', 'json', 'name', 'strict'],
+  import: ['output', 'strict'],
 } as const;
 
 type Command = keyof typeof COMMANDS;
@@ -115,22 +123,49 @@ async function main(argv: string[]): Promise<number> {
   }
 
   const source = file === '-' ? await readStdin() : await readSource(file);
-  const { output, diagnostics } =
-    command === 'compile'
-      ? compile(source, {
-          target: 'linkml',
-          schemaName: values.name ?? defaultSchemaName(file),
-          format: values.json === true ? 'json' : 'yaml',
-        })
-      : compile(source, { target: 'mermaid', notes: values.notes });
+  // `import` reads LinkML rather than Skiss, and is the one command whose
+  // result carries a SPEC §8 report of what the projection could not carry.
+  const { output, diagnostics, dropped } = runCommand(command, source, file, values);
 
   const label = file === '-' ? '<stdin>' : file;
+  // Issue #47, D2: the report is information and not an error, so it is
+  // written whether or not `--strict` was given, and before the diagnostics.
+  const report = formatDropped(dropped);
+  if (report !== '') process.stderr.write(`${report}\n`);
   for (const d of diagnostics) process.stderr.write(`${formatDiagnostic(d, label)}\n`);
 
   if (values.output === undefined) process.stdout.write(output);
   else await writeOutput(values.output, output);
 
-  return values.strict === true && diagnostics.length > 0 ? EXIT_STRICT : EXIT_OK;
+  const strict = values.strict === true && (diagnostics.length > 0 || dropped.length > 0);
+  return strict ? EXIT_STRICT : EXIT_OK;
+}
+
+/** What every command produces. `dropped` is empty for all but `import`. */
+interface CommandResult {
+  output: string;
+  diagnostics: Diagnostic[];
+  dropped: Dropped[];
+}
+
+function runCommand(
+  command: Command,
+  source: string,
+  file: string,
+  values: { name?: string; json?: boolean; notes?: boolean },
+): CommandResult {
+  if (command === 'import') return importLinkML(source);
+  if (command === 'compile') {
+    return {
+      ...compile(source, {
+        target: 'linkml',
+        schemaName: values.name ?? defaultSchemaName(file),
+        format: values.json === true ? 'json' : 'yaml',
+      }),
+      dropped: [],
+    };
+  }
+  return { ...compile(source, { target: 'mermaid', notes: values.notes }), dropped: [] };
 }
 
 /**

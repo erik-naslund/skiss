@@ -66,7 +66,11 @@ export interface ClassNode {
 
 export type Severity = 'error' | 'warning';
 
-/** Codes from the table in docs/ARCHITECTURE.md. `parse` adds the `E_` codes, `resolve` the `W_` codes. */
+/**
+ * Codes from the tables in docs/ARCHITECTURE.md. `parse` adds the `E_` codes,
+ * `resolve` the `W_` codes, and `importLinkML` the one code of its own,
+ * `E_NOT_YAML`, for a text no schema can be read out of.
+ */
 export type DiagnosticCode =
   | 'E_UNPARSABLE'
   | 'E_FIELD_WITHOUT_CLASS'
@@ -78,7 +82,8 @@ export type DiagnosticCode =
   | 'W_UNDECLARED_FIELD'
   | 'W_DUPLICATE_CLASS'
   | 'W_DUPLICATE_FIELD'
-  | 'W_MULTIPLE_IDENTIFIERS';
+  | 'W_MULTIPLE_IDENTIFIERS'
+  | 'E_NOT_YAML';
 
 export interface Diagnostic {
   severity: Severity;

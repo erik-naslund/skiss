@@ -25,6 +25,7 @@ skiss/
       skiss.ts        # Document -> canonical Skiss text (0.3.0)
       from-linkml.ts  # LinkML schema object -> Document + what it dropped (0.3.0)
     serialize.ts      # schema object -> YAML / JSON (0.2.0)
+    import.ts         # LinkML text -> Skiss text in one call (0.3.0)
     cli.ts            # the `skiss` command (Node only)
   test/
     fixtures/         # golden files, see Testing
@@ -56,6 +57,11 @@ LinkML schema object
    │
    ▼  fromLinkML()   the inverse of §5.1, plus what it could not carry
 { document, source, dropped }
+
+LinkML text
+   │
+   ▼  importLinkML() the YAML step, then fromLinkML, then resolve
+{ output, dropped, diagnostics }
 ```
 
 `parse` and `resolve` are separate on purpose. Parsing is line-local and always succeeds for the lines it can read. The one piece of state `parse` carries between lines is which class is current, so a field can attach to it and a field before any class can be reported; no line changes how another line is *read*. Resolving is where anything that needs two lines happens, and it only ever adds warnings ([ADR 0004](adr/0004-line-based-parsing-and-diagnostics.md)).
@@ -82,6 +88,7 @@ export function serialize(schema: LinkMLSchema, format: 'yaml' | 'json'): string
 export function toSkiss(doc: Document): string;
 export function fromLinkML(schema: unknown): { document: Document; source: string; dropped: Dropped[] };
 export function formatDropped(dropped: Dropped[]): string;   // the SPEC §8 one-line report
+export function importLinkML(text: string): { output: string; dropped: Dropped[]; diagnostics: Diagnostic[] };
 ```
 
 `parse` never throws and never returns null. It returns whatever it could read plus diagnostics.
@@ -122,6 +129,8 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 | `W_MULTIPLE_IDENTIFIERS` | warning | More than one `*` in a class. First wins. |
 
 This table is the contract for `broken.skiss` in the fixtures.
+
+One code is not in it, because no Skiss line can produce it: `importLinkML` reports `E_NOT_YAML` on line 1 for a text no schema can be read out of. See LinkML import.
 
 ## Mermaid mapping
 
@@ -176,6 +185,10 @@ Every mapping is the inverse of a §5.1 row. Everything LinkML says that §5.1 h
 `element` names the element as the sketch names it, `Class` or `Class.field`; an enum is named as LinkML named it, since the sketch does not keep enum names. `formatDropped` counts the reports by kind into the §8 one-line report.
 
 `test/fixtures/foreign.linkml.yaml` is a schema Skiss did not write, and `foreign.skiss` and `foreign.dropped.json` beside it are what it projects to. For every fixture LinkML carries whole, Skiss → LinkML → Skiss is identity.
+
+`importLinkML(text)` is the whole path in one call, as `compile` is the whole path the other way: it reads the YAML — JSON is YAML, so one parser reads both forms — hands the object to `fromLinkML`, and returns its `source` as `output`, its `dropped`, and the diagnostics of `resolve` on the document it built, whose lines are lines of `output`. It is where the YAML is read because `fromLinkML` takes an object; `yaml` needs nothing from Node, so the library stays browser-safe. It never throws: a text that is not YAML is empty output and one `E_NOT_YAML` error on line 1, since the reader never got as far as a line of its own to point at.
+
+`skiss import <file> [-o path] [--strict]` is that call from the command line, with the conventions of `diagram` and `compile`: `-` for standard input, the sketch on standard output or to `-o` verbatim, and the exit codes above. The SPEC §8 report is written to standard error first, as one line, whether or not `--strict` was given — it is information, not an error — and the diagnostics follow it in the usual `file:line:col:` form. `--strict` exits 1 when there are diagnostics, and also when anything was dropped.
 
 ## Testing
 
