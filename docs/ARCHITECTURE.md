@@ -78,7 +78,7 @@ Every node carries its source position: a line number, and a column range for ea
 ```ts
 interface Document  { classes: ClassNode[]; diagnostics: Diagnostic[] }
 interface ClassNode { name: Name; system?: Name; similarTo?: Name; description?: string; note?: string; fields: FieldNode[]; line: number }
-interface FieldNode { name: Name; identifier: boolean; type?: TypeRef; system?: Name; joinsTo?: { className: Name; fieldName: Name }; description?: string; note?: string; line: number }
+interface FieldNode { name: Name; identifier: boolean; identifierAt?: Name; type?: TypeRef; system?: Name; joinsTo?: { className: Name; fieldName: Name }; description?: string; note?: string; line: number }
 type TypeRef = { kind: 'primitive'; name: Primitive; many: boolean }
              | { kind: 'class';     name: Name;      many: boolean }
              | { kind: 'enum';      values: Name[];  many: boolean }

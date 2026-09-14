@@ -312,7 +312,7 @@ describe('W_DUPLICATE_CLASS and W_DUPLICATE_FIELD (D1)', () => {
 });
 
 describe('W_MULTIPLE_IDENTIFIERS (SPEC §3.8, AC5)', () => {
-  test('every `*` after the first is reported and its identifier flag cleared', () => {
+  test('every `*` after the first is reported on the `*` and its flag cleared', () => {
     const doc = parse('Ship\n  id*\n  name\n  code*\n  serial*\n');
     const out = resolve(doc);
     expect(warnings(out)).toEqual([
@@ -321,8 +321,8 @@ describe('W_MULTIPLE_IDENTIFIERS (SPEC §3.8, AC5)', () => {
         code: 'W_MULTIPLE_IDENTIFIERS',
         message: '`*` on `code` is ignored: class `Ship` already has the identifier `id` on line 2',
         line: 4,
-        col: 2,
-        end: 6,
+        col: 6,
+        end: 7,
       },
       {
         severity: 'warning',
@@ -330,8 +330,8 @@ describe('W_MULTIPLE_IDENTIFIERS (SPEC §3.8, AC5)', () => {
         message:
           '`*` on `serial` is ignored: class `Ship` already has the identifier `id` on line 2',
         line: 5,
-        col: 2,
-        end: 8,
+        col: 8,
+        end: 9,
       },
     ]);
     expect(out.classes[0]?.fields.map((f) => f.identifier)).toEqual([true, false, false, false]);

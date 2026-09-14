@@ -334,9 +334,11 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
   }
   const node: FieldNode = { name: name(head, line), line, identifier: false };
 
-  if (peek(c)?.kind === '*') {
+  const star = peek(c);
+  if (star?.kind === '*') {
     take(c);
     node.identifier = true;
+    node.identifierAt = name(star, line);
   }
 
   const colon = peek(c);
