@@ -10,7 +10,13 @@ export type {
   Severity,
   TypeRef,
 } from './ast.ts';
-export { type CompileOptions, type CompileResult, compile } from './compile.ts';
+export {
+  type CompileOptions,
+  type CompileResult,
+  compile,
+  type LinkMLCompileOptions,
+  type MermaidCompileOptions,
+} from './compile.ts';
 export { formatDiagnostic } from './diagnostics.ts';
 export {
   type LinkMLAnnotations,
