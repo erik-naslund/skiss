@@ -16,9 +16,9 @@ import { toSkiss } from './skiss.ts';
 /**
  * One thing the projection could not carry. `kind` is the LinkML key, or one
  * of the projection's own kinds: `renamed`, `narrowed`, `inlined`,
- * `enum_detail`, `annotation`, `schema`. `element` names what carried it as
- * the sketch names it — `Class`, `Class.field` — or, for an enum, its LinkML
- * name, which the sketch does not keep.
+ * `enum_detail`, `annotation`, `schema`, `unreadable`. `element` names what
+ * carried it as the sketch names it — `Class`, `Class.field` — or, for an
+ * enum, its LinkML name, which the sketch does not keep.
  */
 export interface Dropped {
   kind: string;
@@ -176,17 +176,26 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
       }
       continue;
     }
+    const undeclared = annotations.get('undeclared');
+    if (undeclared !== undefined && typeof undeclared !== 'boolean') {
+      report('annotation', name, notText('undeclared', undeclared));
+    }
 
     const node: ClassNode = { name: at0(name), fields: [], line: 0 };
     const description = oneLine(stringOf(get(def, 'description')));
     if (description !== undefined) node.description = description;
 
     const system = annotations.get('system');
-    if (typeof system === 'string' && SYSTEM_OR_VALUE.test(system)) node.system = at0(system);
-    else if (system !== undefined) report('annotation', name, '`system` is not a system name');
+    if (typeof system === 'string') {
+      if (SYSTEM_OR_VALUE.test(system)) node.system = at0(system);
+      else report('annotation', name, '`system` is not a system name');
+    } else if (system !== undefined) report('annotation', name, notText('system', system));
 
-    const note = oneLine(stringOf(annotations.get('note')));
-    if (note !== undefined) node.note = note;
+    const rawNote = annotations.get('note');
+    if (typeof rawNote === 'string') {
+      const note = oneLine(rawNote);
+      if (note !== undefined) node.note = note;
+    } else if (rawNote !== undefined) report('annotation', name, notText('note', rawNote));
 
     const mappings = stringList(get(def, 'close_mappings'));
     const first = mappings[0];
@@ -333,8 +342,10 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
 
     const annotations = annotationsOf(def);
     const system = annotations.get('system');
-    if (typeof system === 'string' && SYSTEM_OR_VALUE.test(system)) field.system = at0(system);
-    else if (system !== undefined) report('annotation', element, '`system` is not a system name');
+    if (typeof system === 'string') {
+      if (SYSTEM_OR_VALUE.test(system)) field.system = at0(system);
+      else report('annotation', element, '`system` is not a system name');
+    } else if (system !== undefined) report('annotation', element, notText('system', system));
 
     const joins = annotations.get('joins_to');
     if (typeof joins === 'string') {
@@ -348,10 +359,13 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
         reference(element, target, targetClass);
         reference(element, targetField, targetName);
       } else report('annotation', element, '`joins_to` is not `Class.field`');
-    } else if (joins !== undefined) report('annotation', element, '`joins_to` is not text');
+    } else if (joins !== undefined) report('annotation', element, notText('joins_to', joins));
 
-    const note = oneLine(stringOf(annotations.get('note')));
-    if (note !== undefined) field.note = note;
+    const rawNote = annotations.get('note');
+    if (typeof rawNote === 'string') {
+      const note = oneLine(rawNote);
+      if (note !== undefined) field.note = note;
+    } else if (rawNote !== undefined) report('annotation', element, notText('note', rawNote));
 
     for (const other of Object.keys(def)) {
       if (!SLOT_KEYS.has(other)) {
@@ -447,7 +461,12 @@ function sharingLost(
 // ---------------------------------------------------------------------------
 // The report as one line, SPEC §8.
 
-/** Kinds that name a countable thing rather than a key on one. */
+/**
+ * Kinds that name a countable thing rather than a key on one. Every kind the
+ * projection invents is here: the fallback below reads as the LinkML key it is
+ * for `is_a on 4 classes`, and as implementation vocabulary for a kind LinkML
+ * never wrote (issue #53, S9).
+ */
 const COUNTED: Record<string, [string, string]> = {
   renamed: ['name', 'names'],
   inlined: ['enum', 'enums'],
@@ -456,6 +475,9 @@ const COUNTED: Record<string, [string, string]> = {
   class: ['class', 'classes'],
   slot: ['slot', 'slots'],
   schema: ['schema key', 'schema keys'],
+  narrowed: ['narrowed range', 'narrowed ranges'],
+  enum_detail: ['enum detail', 'enum details'],
+  annotation: ['unreadable annotation', 'unreadable annotations'],
   // `mixin: true` marks the class; `mixins: [M]` points at another one.
   mixin: ['mixin class', 'mixin classes'],
   mixins: ['mixin', 'mixins'],
@@ -463,8 +485,12 @@ const COUNTED: Record<string, [string, string]> = {
   unit: ['unit', 'units'],
 };
 
-/** Kinds whose element is an enum. Everything else is a class or a slot. */
-const ENUM_KINDS = new Set(['enum_detail']);
+/**
+ * The kind of the one report a schema this cannot read at all produces. It is
+ * not counted with the rest: nothing was read, so `1 schema key` said the
+ * opposite of what happened. Its `detail` is the sentence (issue #53, M3).
+ */
+const UNREADABLE = 'unreadable';
 
 export function formatDropped(dropped: Dropped[]): string {
   const groups = new Map<string, Dropped[]>();
@@ -475,9 +501,14 @@ export function formatDropped(dropped: Dropped[]): string {
   }
 
   const drops: string[] = [];
+  const notRead: string[] = [];
   let renamed = '';
   let inlined = '';
   for (const [kind, entries] of groups) {
+    if (kind === UNREADABLE) {
+      for (const entry of entries) notRead.push(entry.detail ?? 'the schema could not be read');
+      continue;
+    }
     const phrase = phraseFor(kind, entries);
     if (kind === 'renamed') renamed = phrase;
     else if (kind === 'inlined') inlined = phrase;
@@ -485,6 +516,7 @@ export function formatDropped(dropped: Dropped[]): string {
   }
 
   const sentences: string[] = [];
+  if (notRead.length > 0) sentences.push(`Not read: ${notRead.join('; ')}.`);
   if (drops.length > 0) sentences.push(`Dropped: ${drops.join(', ')}.`);
   if (renamed !== '') sentences.push(`Renamed: ${renamed}.`);
   if (inlined !== '') sentences.push(`Inlined: ${inlined}.`);
@@ -495,12 +527,12 @@ function phraseFor(kind: string, entries: Dropped[]): string {
   const n = entries.length;
   const counted = Object.hasOwn(COUNTED, kind) ? COUNTED[kind] : undefined;
   if (counted !== undefined) return `${n} ${n === 1 ? counted[0] : counted[1]}`;
-  return `${kind} on ${n} ${nounFor(kind, entries)}`;
+  return `${kind} on ${n} ${nounFor(entries)}`;
 }
 
-function nounFor(kind: string, entries: Dropped[]): string {
+/** Every remaining kind is a LinkML key, and a key is on a class or a slot. */
+function nounFor(entries: Dropped[]): string {
   const one = entries.length === 1;
-  if (ENUM_KINDS.has(kind)) return one ? 'enum' : 'enums';
   const slots = entries.filter((entry) => entry.element.includes('.')).length;
   if (slots === entries.length) return one ? 'slot' : 'slots';
   if (slots === 0) return one ? 'class' : 'classes';
@@ -594,19 +626,35 @@ const stringList = (value: unknown): string[] =>
 /**
  * The annotations of a class or a slot, compact (`system: Catalog`, what §5.1
  * writes) or in the long form LinkML also accepts (`system: {tag: system,
- * value: Catalog}`).
+ * value: Catalog}`). The value is what the schema wrote: §5.3 writes text, or
+ * the `undeclared` flag, and every caller here reports anything else rather
+ * than reading it. Stringifying it invented an `@null` system and a
+ * `? undefined` doubt out of a tag written with no value at all, which SPEC §8
+ * forbids: what the reader cannot use is reported, never guessed at.
+ * A tag with no value reads as `null`, in both forms.
  */
-function annotationsOf(def: Record<string, unknown>): Map<string, string | boolean> {
-  const out = new Map<string, string | boolean>();
+function annotationsOf(def: Record<string, unknown>): Map<string, unknown> {
+  const out = new Map<string, unknown>();
   const annotations = asRecord(get(def, 'annotations'));
   if (annotations === undefined) return out;
   for (const tag of Object.keys(annotations)) {
     const raw = get(annotations, tag);
-    const value = asRecord(raw) === undefined ? raw : get(asRecord(raw) ?? {}, 'value');
-    if (typeof value === 'string' || typeof value === 'boolean') out.set(tag, value);
-    else out.set(tag, String(value));
+    const long = asRecord(raw);
+    const value = long === undefined ? raw : get(long, 'value');
+    out.set(tag, value ?? null);
   }
   return out;
+}
+
+/**
+ * What was written where §5.3 writes text, named by the type it has, so the
+ * report says what is there without guessing at what it meant.
+ */
+function notText(tag: string, value: unknown): string {
+  if (value === null) return `\`${tag}\` was written with no value`;
+  if (Array.isArray(value)) return `\`${tag}\` is a list, not text`;
+  if (typeof value === 'object') return `\`${tag}\` is a map, not text`;
+  return `\`${tag}\` is a ${typeof value}, not text`;
 }
 
 /** The class's `attributes`, then the schema `slots` it lists, in that order. */
@@ -639,9 +687,14 @@ const stringType = (many: boolean): TypeRef => ({
 const schemaElement = (root: Record<string, unknown>): string =>
   stringOf(get(root, 'name')) ?? 'schema';
 
-/** A schema this cannot read at all: an empty sketch and one report saying why. */
+/**
+ * A schema this cannot read at all: an empty sketch and one report saying why.
+ * `unreadable` and not `schema`: a schema key that was dropped and a file that
+ * was never a schema are two different things, and counting them as one told
+ * the reader the second was the first (issue #53, M3).
+ */
 const nothing = (element: string, detail: string): FromLinkMLResult => ({
   document: parse(''),
   source: '',
-  dropped: [{ kind: 'schema', element, detail }],
+  dropped: [{ kind: UNREADABLE, element, detail }],
 });

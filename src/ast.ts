@@ -82,6 +82,7 @@ export type DiagnosticCode =
   | 'W_UNDECLARED_FIELD'
   | 'W_DUPLICATE_CLASS'
   | 'W_DUPLICATE_FIELD'
+  | 'W_DUPLICATE_ENUM_VALUE'
   | 'W_MULTIPLE_IDENTIFIERS'
   | 'E_NOT_YAML';
 

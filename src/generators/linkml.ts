@@ -83,10 +83,11 @@ export function toLinkML(doc: Document, opts: LinkMLOptions): LinkMLSchema {
 
   // SPEC §5.2. `linkml` and the schema's own prefix come first; a system
   // prefix that would collide with either is not allowed to overwrite it.
-  // `Object.hasOwn`, not `in`: `prefixes` is a plain object, so `in` is true
-  // for `constructor` and the other `Object.prototype` keys and a real prefix
-  // would be dropped.
-  const prefixes: Record<string, string> = { linkml: 'https://w3id.org/linkml/' };
+  // `Object.hasOwn`, not `in`: a name-keyed map holds whatever the sketch
+  // wrote, so `in` is true for `constructor` and the other `Object.prototype`
+  // keys and a real prefix would be dropped.
+  const prefixes = nameKeyed<string>();
+  prefixes.linkml = 'https://w3id.org/linkml/';
   if (!Object.hasOwn(prefixes, schemaName)) prefixes[schemaName] = `${BASE_URI}/${schemaName}/`;
 
   // One prefix per distinct `@System`, in the order the systems are written:
@@ -125,14 +126,14 @@ export function toLinkML(doc: Document, opts: LinkMLOptions): LinkMLSchema {
     imports: ['linkml:types'],
   };
 
-  const out: Record<string, LinkMLClass> = {};
+  const out = nameKeyed<LinkMLClass>();
   for (const cls of classes) {
     out[cls.node.name.text] = buildClass(cls, mappingPrefix, enums);
   }
   // SPEC §5.1: a reference to an undeclared class becomes a stub, after the
   // classes that are declared.
   for (const name of resolved.undeclared) {
-    if (!(name.text in out)) out[name.text] = { annotations: { undeclared: true } };
+    if (!Object.hasOwn(out, name.text)) out[name.text] = { annotations: { undeclared: true } };
   }
   if (Object.keys(out).length > 0) schema.classes = out;
 
@@ -242,13 +243,13 @@ function buildEnums(
   classes: EmittedClass[],
   enums: Map<string, string>,
 ): Record<string, LinkMLEnum> {
-  const out: Record<string, LinkMLEnum> = {};
+  const out = nameKeyed<LinkMLEnum>();
   for (const { node, fields } of classes) {
     for (const field of fields) {
       if (field.type?.kind !== 'enum') continue;
       const name = enums.get(useKey(node.name.text, field.name.text));
-      if (name === undefined || name in out) continue;
-      const values: Record<string, null> = {};
+      if (name === undefined || Object.hasOwn(out, name)) continue;
+      const values = nameKeyed<null>();
       for (const value of field.type.values) values[value.text] = null;
       out[name] = { permissible_values: values };
     }
@@ -280,7 +281,7 @@ function buildClass(
     out.close_mappings = [`${mappingPrefix(target)}:${target}`];
   }
 
-  const attributes: Record<string, LinkMLAttribute> = {};
+  const attributes = nameKeyed<LinkMLAttribute>();
   for (const field of fields) {
     attributes[field.name.text] = buildAttribute(field, node.name.text, enums);
   }
@@ -351,6 +352,23 @@ function rangeOf(
 const RESERVED_PREFIXES = new Set(['linkml', 'xsd', 'shex', 'schema']);
 
 /**
+ * The keys `Object.prototype` holds. `nameKeyed` already keeps a map with one
+ * of these as a key honest; a schema named `__proto__` is also given the
+ * trailing underscore, so the name in the output is one no consumer of this
+ * plain data can lose either — a plain `{}` swallows the write and LinkML then
+ * refuses the schema for a `default_prefix` its `prefixes` has no entry for
+ * (issue #53, M5).
+ */
+const PROTOTYPE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * A map keyed by a name that came from the sketch. Null-prototype, so a write
+ * of `__proto__` is a key like any other rather than a silent no-op, and every
+ * key read back is one the sketch wrote.
+ */
+const nameKeyed = <T>(): Record<string, T> => Object.create(null) as Record<string, T>;
+
+/**
  * SPEC §5.2: lowercase, every non-alphanumeric an underscore. A LinkML name
  * must match `^[a-zA-Z_][\w.-]*$`, and the schema name is also its prefix,
  * which RDF forbids to be the bare `_` (blank nodes). So a name with no
@@ -361,7 +379,7 @@ const RESERVED_PREFIXES = new Set(['linkml', 'xsd', 'shex', 'schema']);
 const linkmlName = (text: string): string => {
   const name = text.toLowerCase().replace(/[^a-z0-9]/g, '_');
   if (!/[a-z0-9]/.test(name)) return 'sketch';
-  if (RESERVED_PREFIXES.has(name)) return `${name}_`;
+  if (RESERVED_PREFIXES.has(name) || PROTOTYPE_KEYS.has(name)) return `${name}_`;
   return /^[0-9]/.test(name) ? `_${name}` : name;
 };
 

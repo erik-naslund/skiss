@@ -35,7 +35,18 @@ skiss/
 - **`skiss`**, the library entry, is browser-safe: no Node built-ins, no filesystem, no `process`. Its only runtime dependency is a YAML serialiser.
 - **`skiss/cli`** is Node-only and is what the `skiss` binary runs. It reads and writes files and nothing else.
 
-See [ADR 0003](adr/0003-one-package-two-entry-points.md).
+See [ADR 0003](adr/0003-one-package-two-entry-points.md). Publishing the package is [RELEASING.md](RELEASING.md).
+
+Exit codes, the same for every command:
+
+| Code | Means |
+|---|---|
+| 0 | The output was produced. |
+| 1 | `--strict` and the input has diagnostics. The output is still written. |
+| 2 | A usage error, a file that cannot be read, or an input nothing could be read out of: for `import`, a text that is not YAML or a schema `fromLinkML` could not read, which produces no sketch at all. |
+| 70 | An internal error, which is a bug in skiss. |
+
+A reader that closes the pipe early (`skiss diagram big.skiss | head`) is not an error: the streams carry an `EPIPE` guard and the command exits 0.
 
 ## Pipeline
 
@@ -98,15 +109,18 @@ export function importLinkML(text: string): { output: string; dropped: Dropped[]
 Every node carries its source position: a line number, and a column range for each token. Line numbers drive error lists. Column ranges are what an editor needs for highlighting and squiggles, and they cost nothing to record now.
 
 ```ts
-interface Document  { classes: ClassNode[]; diagnostics: Diagnostic[] }
+interface Document  { classes: ClassNode[]; diagnostics: Diagnostic[]; undeclared?: Name[] }
 interface ClassNode { name: Name; system?: Name; similarTo?: Name; description?: string; note?: string; fields: FieldNode[]; line: number }
 interface FieldNode { name: Name; identifier: boolean; identifierAt?: Name; type?: TypeRef; system?: Name; joinsTo?: { className: Name; fieldName: Name }; description?: string; note?: string; line: number }
-type TypeRef = { kind: 'primitive'; name: Primitive; many: boolean }
-             | { kind: 'class';     name: Name;      many: boolean }
-             | { kind: 'enum';      values: Name[];  many: boolean }
+type TypeRef = { kind: 'primitive'; name: Primitive; written: Name; many: boolean }
+             | { kind: 'class';     name: Name;                     many: boolean }
+             | { kind: 'enum';      values: Name[];                 many: boolean }
+             | { kind: 'unknown';   name: Name;                     many: boolean }
 interface Name { text: string; line: number; col: number; end: number }
 interface Diagnostic { severity: 'error' | 'warning'; code: string; message: string; line: number; col?: number; end?: number }
 ```
+
+`undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
 
 Exact shapes are decided in code. What must be present is the position on every node and the diagnostic list on the document.
 
@@ -126,6 +140,7 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 | `W_UNDECLARED_FIELD` | warning | `= X.f` where X exists but has no field f. |
 | `W_DUPLICATE_CLASS` | warning | Two classes with the same name. |
 | `W_DUPLICATE_FIELD` | warning | Two fields with the same name in one class. |
+| `W_DUPLICATE_ENUM_VALUE` | warning | The same value twice in one inline enum. First wins; the line is kept as written. |
 | `W_MULTIPLE_IDENTIFIERS` | warning | More than one `*` in a class. First wins. |
 
 This table is the contract for `broken.skiss` in the fixtures.
@@ -176,19 +191,20 @@ Every mapping is the inverse of a §5.1 row. Everything LinkML says that §5.1 h
 | `narrowed` | a `range` no Skiss primitive covers; the word survives as an unknown type and falls back to `string` |
 | `inlined` | an enum used by several attributes, where inlining it loses the sharing |
 | `enum_detail` | a permissible value with a body of its own, or a key on the enum other than `permissible_values` |
-| `annotation` | an annotation tag §5.1 gives no meaning, or one whose value Skiss cannot write |
+| `annotation` | an annotation tag §5.1 gives no meaning, or one whose value is not text §5.3 could have written; nothing is stringified into a system or a doubt |
 | `class`, `slot` | a class or an attribute whose body is not a definition, or a global slot no class lists |
 | `enum` | an enum Skiss cannot write, so the attributes that had it as their range keep no type |
 | `unused_enum` | an enum no attribute has as its range, so it reaches the sketch nowhere |
-| `schema` | a key at schema level that is not §5.2 boilerplate, or a schema this cannot read at all |
+| `schema` | a key at schema level that is not §5.2 boilerplate |
+| `unreadable` | the schema could not be read at all: its `detail` is the whole report, and the sketch is empty |
 
-`element` names the element as the sketch names it, `Class` or `Class.field`; an enum is named as LinkML named it, since the sketch does not keep enum names. `formatDropped` counts the reports by kind into the §8 one-line report.
+`element` names the element as the sketch names it, `Class` or `Class.field`; an enum is named as LinkML named it, since the sketch does not keep enum names. `formatDropped` counts the reports by kind into the §8 one-line report. Every kind the projection invents has a phrase of its own there — `1 narrowed range`, not `narrowed on 1 slot` — so the line reads in LinkML's vocabulary and the reader's, never in the code's; `unreadable` is not counted at all but written as its own sentence: "Not read: the schema has no `classes`."
 
-`test/fixtures/foreign.linkml.yaml` is a schema Skiss did not write, and `foreign.skiss` and `foreign.dropped.json` beside it are what it projects to. For every fixture LinkML carries whole, Skiss → LinkML → Skiss is identity.
+`test/fixtures/foreign.linkml.yaml` is a schema Skiss did not write, and `foreign.skiss` and `foreign.dropped.json` beside it are what it projects to. For every fixture LinkML carries whole, Skiss → LinkML → Skiss is identity up to canonical form, as SPEC §8 puts it.
 
 `importLinkML(text)` is the whole path in one call, as `compile` is the whole path the other way: it reads the YAML — JSON is YAML, so one parser reads both forms — hands the object to `fromLinkML`, and returns its `source` as `output`, its `dropped`, and the diagnostics of `resolve` on the document it built, whose lines are lines of `output`. It is where the YAML is read because `fromLinkML` takes an object; `yaml` needs nothing from Node, so the library stays browser-safe. It never throws: a text that is not YAML is empty output and one `E_NOT_YAML` error on line 1, since the reader never got as far as a line of its own to point at.
 
-`skiss import <file> [-o path] [--strict]` is that call from the command line, with the conventions of `diagram` and `compile`: `-` for standard input, the sketch on standard output or to `-o` verbatim, and the exit codes above. The SPEC §8 report is written to standard error first, as one line, whether or not `--strict` was given — it is information, not an error — and the diagnostics follow it in the usual `file:line:col:` form. `--strict` exits 1 when there are diagnostics, and also when anything was dropped.
+`skiss import <file> [-o path] [--strict]` is that call from the command line, with the conventions of `diagram` and `compile`: `-` for standard input, the sketch on standard output or to `-o` verbatim, and the exit codes above. The SPEC §8 report is written to standard error first, as one line, whether or not `--strict` was given — it is information, not an error — and the diagnostics follow it in the usual `file:line:col:` form. `--strict` exits 1 when there are diagnostics, and also when anything was dropped. An input no schema could be read out of exits 2 rather than 1: nothing was produced, which is unreadable input and not a sketch with broken lines in it.
 
 ## Testing
 

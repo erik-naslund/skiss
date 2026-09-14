@@ -38,7 +38,7 @@ Stack (frozen unless an ADR changes it):
 src/index.ts       ← the library. Browser-safe. Depends on `yaml` only.
 src/cli.ts         ← the command. Node-only. The only file that touches files.
 test/fixtures/     ← golden files. A language feature does not exist until it has one.
-docs/              ← SPEC.md, DESIGN.md, ARCHITECTURE.md, ROADMAP.md, adr/
+docs/              ← SPEC.md, DESIGN.md, ARCHITECTURE.md, ROADMAP.md, RELEASING.md, adr/
 ```
 
 Rules:
@@ -118,6 +118,9 @@ or red CI.
 
 `pnpm verify` skips step 4 only when Python is unavailable, and says so.
 A tool that is present and fails is a failed gate. CI runs all four.
+
+Publishing is not part of the loop: `docs/RELEASING.md` is the procedure that
+turns a merged change into the package users install.
 
 > **Bootstrap note:** `pnpm verify`, `scripts/linkml-env.sh`, the Biome
 > config and the CI workflow are created during repository bootstrap. Until

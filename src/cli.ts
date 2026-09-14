@@ -38,7 +38,8 @@ wrote has, so their line numbers are lines of that sketch.
 Exit codes:
   0  the output was produced
   1  --strict and the input has diagnostics (the output is still written)
-  2  usage error, missing file or unreadable input
+  2  usage error, missing file, or unreadable input: for import, a text no
+     schema could be read out of, which produces no sketch at all
   70 internal error, a bug in skiss
 `;
 
@@ -137,8 +138,26 @@ async function main(argv: string[]): Promise<number> {
   if (values.output === undefined) process.stdout.write(output);
   else await writeOutput(values.output, output);
 
+  // Issue #53, S6. `import` of a text no schema can be read out of writes
+  // nothing at all, which is a different situation from a sketch with some
+  // broken lines: it is unreadable input, the exit code `diagram` and
+  // `compile` already use for one. The report and the empty output are
+  // written either way, so only the code says so.
+  if (unreadableInput(command, diagnostics, dropped)) return EXIT_USAGE;
+
   const strict = values.strict === true && (diagnostics.length > 0 || dropped.length > 0);
   return strict ? EXIT_STRICT : EXIT_OK;
+}
+
+/**
+ * True when `import` read no schema at all: a text that is not YAML, or one
+ * `fromLinkML` reported as unreadable (SPEC §8). A schema with no classes in
+ * it is read and projects to an empty sketch, which is not this.
+ */
+function unreadableInput(command: Command, diagnostics: Diagnostic[], dropped: Dropped[]): boolean {
+  if (command !== 'import') return false;
+  if (dropped.some((entry) => entry.kind === 'unreadable')) return true;
+  return diagnostics.some((d) => d.code === 'E_NOT_YAML');
 }
 
 /** What every command produces. `dropped` is empty for all but `import`. */
@@ -209,6 +228,19 @@ function reason(error: unknown): string {
     return code ?? error.message;
   }
   return String(error);
+}
+
+// `skiss diagram big.skiss | head` closes the pipe while the write is still
+// going. Node raises that on the stream itself, asynchronously, where the
+// handler below cannot see it, so the process died on an unhandled `error`
+// event: a Node stack trace on stderr and exit 1, the code `--strict` means.
+// A reader that stopped reading is not a failure of the command (issue #53,
+// M2). Anything else on these streams is still a bug and is rethrown.
+for (const stream of [process.stdout, process.stderr]) {
+  stream.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EPIPE') process.exit(EXIT_OK);
+    throw error;
+  });
 }
 
 // `process.exitCode` rather than `process.exit()`, so a piped stdout is

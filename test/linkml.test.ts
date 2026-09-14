@@ -189,17 +189,34 @@ describe('SPEC §5.2, an empty document', () => {
     expect(Object.hasOwn(named.prefixes, 'schema')).toBe(false);
   });
 
-  test('a schema name that is an `Object.prototype` key still has a prefix (review B3)', () => {
-    const named = schema('', 'constructor');
-    expect(named.default_prefix).toBe('constructor');
-    expect(Object.hasOwn(named.prefixes, 'constructor')).toBe(true);
-    expect(named.prefixes[named.default_prefix]).toBe('https://example.org/constructor/');
+  test('a schema name that is an `Object.prototype` key takes a trailing `_` (issue #53, M5)', () => {
+    // Review B3 asked that such a name still have a prefix; `__proto__` is the
+    // one a plain object swallows on the way in, so all three are spelled out
+    // of the way and `default_prefix` is in `prefixes` whatever a consumer of
+    // the schema object does with it.
+    for (const key of ['__proto__', 'constructor', 'prototype']) {
+      const named = schema('', key);
+      expect(named.default_prefix).toBe(`${key}_`);
+      expect(Object.hasOwn(named.prefixes, `${key}_`)).toBe(true);
+      expect(named.prefixes[named.default_prefix]).toBe(`https://example.org/${key}_/`);
+    }
   });
 
-  test('a system named after an `Object.prototype` key still has a prefix (review B3)', () => {
+  test('a system named after an `Object.prototype` key takes one too (issue #53, M5)', () => {
     const named = schema('Ship @Constructor\n  id*\n', 'sketch');
-    expect(Object.hasOwn(named.prefixes, 'constructor')).toBe(true);
-    expect(named.prefixes.constructor).toBe('https://example.org/system/constructor/');
+    expect(Object.hasOwn(named.prefixes, 'constructor_')).toBe(true);
+    expect(named.prefixes.constructor_).toBe('https://example.org/system/constructor_/');
+  });
+
+  test('every name-keyed map survives a `__proto__` key (issue #53, M5)', () => {
+    const named = schema('', '__proto__');
+    // A plain object literal swallows this write and `gen-python` then refuses
+    // the schema: "Default prefix: __proto__ is not defined".
+    expect(typeof named.prefixes[named.default_prefix]).toBe('string');
+    expect(JSON.parse(JSON.stringify(named)).prefixes[named.default_prefix]).toBe(
+      named.prefixes[named.default_prefix],
+    );
+    expect(serialize(named, 'yaml')).toContain('__proto___: https://example.org/__proto___/');
   });
 
   test('serialises to YAML with no `classes` or `enums` section', () => {

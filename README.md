@@ -64,7 +64,7 @@ Or without installing: `npx @eriknaslund/skiss diagram model.skiss`.
 
 `skiss compile model.skiss` writes a LinkML schema instead, as YAML on standard output. `--json` writes the same schema as JSON, `--name` sets the schema name (it defaults to the file name without its extension, and to `sketch` when reading standard input), and `-o`, `-`, `--strict` and the diagnostics work exactly as they do for `diagram`.
 
-`skiss import schema.linkml.yaml` goes the other way: it reads a LinkML schema, YAML or JSON, and writes Skiss. What the projection could not carry — `is_a`, patterns, `required`, the names it had to convert — is one line on standard error before the diagnostics, because a sketch is a smaller language than LinkML and that line says by how much. `-o`, `-` and the diagnostics work as they do for `compile`; `--strict` exits 1 when the projected sketch has a diagnostic, and also when anything was dropped.
+`skiss import schema.linkml.yaml` goes the other way: it reads a LinkML schema, YAML or JSON, and writes Skiss. What the projection could not carry — `is_a`, patterns, `required`, the names it had to convert — is one line on standard error before the diagnostics, because a sketch is a smaller language than LinkML and that line says by how much. `-o`, `-` and the diagnostics work as they do for `compile`; `--strict` exits 1 when the projected sketch has a diagnostic, and also when anything was dropped. An input that is not a schema at all — not YAML, or YAML no schema can be read out of — produces no sketch, says why on standard error, and exits 2, the code every command uses for unreadable input.
 
 `npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toSkiss`, `fromLinkML`, `formatDropped`, `importLinkML` and `VERSION`, browser-safe.
 
@@ -79,11 +79,14 @@ Editors that render Skiss live are separate projects built on this package. This
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised. |
 | [docs/adr/](docs/adr/) | Architecture decision records. |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What comes next. |
+| [docs/RELEASING.md](docs/RELEASING.md) | How a version reaches npm. |
 | [AGENTS.md](AGENTS.md) | How this repository is built. |
 
 ## Status
 
-Pre-release. The [specification](docs/SPEC.md) is at 0.1. Nothing is implemented yet.
+0.3.0, published on npm as [`@eriknaslund/skiss`](https://www.npmjs.com/package/@eriknaslund/skiss). The language parses, resolves and diagnoses; `skiss diagram` draws it, `skiss compile` writes LinkML that the real LinkML toolchain validates in CI, and `skiss import` reads a LinkML schema back into a sketch. The library exports the same in both directions and is browser-safe.
+
+The [specification](docs/SPEC.md) is at 0.1 and moves when the language does, which is not with every release. Not built: inheritance, and editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
 
 ## License
 

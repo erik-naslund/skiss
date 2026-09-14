@@ -169,7 +169,7 @@ describe('fromLinkML never throws (SPEC §8)', () => {
       // and that is the one schema a projection cannot read back (SPEC §8).
       expect(out.dropped).toEqual(
         schema.classes === undefined
-          ? [{ kind: 'schema', element: 'fuzz', detail: 'the schema has no `classes`' }]
+          ? [{ kind: 'unreadable', element: 'fuzz', detail: 'the schema has no `classes`' }]
           : [],
       );
     }

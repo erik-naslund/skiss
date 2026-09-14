@@ -40,3 +40,8 @@ Vessel @Registry ~ Ghost
 # W_DUPLICATE_CLASS: a class declared twice
 Person @Registry
   email
+
+# W_DUPLICATE_ENUM_VALUE: the same value twice in one inline enum
+Voyage
+  id*
+  status: planned|planned|sailing

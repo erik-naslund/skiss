@@ -33,14 +33,14 @@ describe('SPEC §8, a schema this cannot read', () => {
     const out = fromLinkML(input);
     expect(out.source).toBe('');
     expect(out.document.classes).toEqual([]);
-    expect(out.dropped.map((d) => d.kind)).toEqual(['schema']);
+    expect(out.dropped.map((d) => d.kind)).toEqual(['unreadable']);
   });
 
   test('a schema with no `classes` is an empty sketch and one report saying why', () => {
     const out = fromLinkML({ name: 'foreign' });
     expect(out.source).toBe('');
     expect(out.dropped).toEqual([
-      { kind: 'schema', element: 'foreign', detail: 'the schema has no `classes`' },
+      { kind: 'unreadable', element: 'foreign', detail: 'the schema has no `classes`' },
     ]);
   });
 
@@ -467,6 +467,74 @@ describe('SPEC §8, the report', () => {
   });
 });
 
+describe('SPEC §8, an annotation value the reader cannot use (issue #53, M4)', () => {
+  // `String(value)` used to make one of these out of anything: `system:` with
+  // no value became the system `@null`, a long-form annotation with no `value`
+  // became the doubt `? undefined`, and `note: 7` became `? 7`. SPEC §8 says
+  // what the reader cannot use is reported with what was found, never guessed.
+  const annotated = (annotations: Schema): Schema => ({
+    classes: { Book: { annotations, attributes: { title: { annotations } } } },
+  });
+
+  test.each([
+    ['a tag written with no value', null, 'was written with no value'],
+    ['a number', 7, 'is a number, not text'],
+    ['a list', ['a'], 'is a list, not text'],
+    ['a flag where text is expected', true, 'is a boolean, not text'],
+    // A map is the long form, so the value of that form is what is read.
+    ['the long form carrying a map', { value: { a: 1 } }, 'is a map, not text'],
+  ])('`system` and `note` written as %s are reported', (_name, value, detail) => {
+    const parts = annotated({ system: value, note: value });
+    expect(sketch(parts)).toBe('Book\n  title\n');
+    expect(dropped(parts)).toEqual([
+      { kind: 'annotation', element: 'Book', detail: `\`system\` ${detail}` },
+      { kind: 'annotation', element: 'Book', detail: `\`note\` ${detail}` },
+      { kind: 'annotation', element: 'Book.title', detail: `\`system\` ${detail}` },
+      { kind: 'annotation', element: 'Book.title', detail: `\`note\` ${detail}` },
+    ]);
+  });
+
+  test('the long form with no `value` key reads as a tag written with no value', () => {
+    const parts = annotated({ note: { tag: 'note' } });
+    expect(sketch(parts)).toBe('Book\n  title\n');
+    expect(dropped(parts)).toEqual([
+      { kind: 'annotation', element: 'Book', detail: '`note` was written with no value' },
+      { kind: 'annotation', element: 'Book.title', detail: '`note` was written with no value' },
+    ]);
+  });
+
+  test('`joins_to` that is not text is reported with what was found', () => {
+    const parts = { classes: { Book: { attributes: { isbn: { annotations: { joins_to: 7 } } } } } };
+    expect(sketch(parts)).toBe('Book\n  isbn\n');
+    expect(dropped(parts)).toEqual([
+      { kind: 'annotation', element: 'Book.isbn', detail: '`joins_to` is a number, not text' },
+    ]);
+  });
+
+  test('`undeclared` written as anything but a flag is reported, not read as a stub', () => {
+    const parts = { classes: { Ghost: { annotations: { undeclared: 7 } } } };
+    expect(sketch(parts)).toBe('Ghost\n');
+    expect(dropped(parts)).toEqual([
+      { kind: 'annotation', element: 'Ghost', detail: '`undeclared` is a number, not text' },
+    ]);
+  });
+
+  test('text and the `undeclared` flag are still read', () => {
+    const parts = {
+      classes: {
+        Book: {
+          annotations: { system: 'Catalog', note: 'ask the desk' },
+          attributes: { isbn: { annotations: { joins_to: 'Book.isbn' } } },
+        },
+      },
+    };
+    expect(sketch(parts)).toBe(
+      'Book @Catalog                           ? ask the desk\n  isbn = Book.isbn\n',
+    );
+    expect(dropped(parts)).toEqual([]);
+  });
+});
+
 describe('SPEC §8, a key the table carries with a value the reader cannot use', () => {
   test('`identifier: yes` and `multivalued: yes` are reported, not read as booleans', () => {
     // `yes` is a boolean in YAML 1.1 and a string in the YAML 1.2 the `yaml`
@@ -575,6 +643,38 @@ describe('SPEC §8, the report as one line', () => {
         { kind: 'inlined', element: 'c' },
       ]),
     ).toBe('Dropped: 1 unwritable enum, 1 unused enum. Inlined: 1 enum.');
+  });
+
+  test('a schema this cannot read is its own sentence, not a counted key (M3)', () => {
+    expect(
+      formatDropped([
+        { kind: 'unreadable', element: 'foreign', detail: 'the schema has no `classes`' },
+      ]),
+    ).toBe('Not read: the schema has no `classes`.');
+  });
+
+  test('no kind the projection invented prints as itself (S9)', () => {
+    // The kinds of the LinkML import table in docs/ARCHITECTURE.md that are
+    // not LinkML keys. The fallback phrase reads as `is_a on 1 class` for a
+    // key the schema wrote, and as implementation vocabulary for these.
+    const own = [
+      'renamed',
+      'narrowed',
+      'inlined',
+      'enum_detail',
+      'annotation',
+      'class',
+      'slot',
+      'enum',
+      'unused_enum',
+      'schema',
+      'unreadable',
+    ];
+    for (const kind of own) {
+      const line = formatDropped([{ kind, element: 'Book.title', detail: 'why' }]);
+      expect(line).not.toContain(`${kind} on `);
+      expect(line).not.toMatch(/[a-z]_[a-z]/);
+    }
   });
 
   test('conversions and inlined enums are further sentences', () => {
