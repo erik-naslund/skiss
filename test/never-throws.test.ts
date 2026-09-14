@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { parse, resolve } from '../src/index.ts';
+import { parse as parseYaml } from 'yaml';
+import { parse, resolve, serialize, toLinkML } from '../src/index.ts';
 import { mulberry32 } from './mulberry32.ts';
 
 // SPEC §7 and ADR 0004: `parse` and `resolve` never throw and never return
@@ -111,6 +112,11 @@ describe('resolve never throws (SPEC §7, ADR 0004)', () => {
       expect(Array.isArray(out.undeclared)).toBe(true);
       expect(JSON.parse(JSON.stringify(out))).toEqual(out);
       expect(resolve(out)).toEqual(out);
+      // `toLinkML` and `serialize` carry the same claim, and the YAML they
+      // write has to come back through YAML 1.1, which is what LinkML reads
+      // it with.
+      const yaml = serialize(toLinkML(doc, { schemaName: 'fuzz' }), 'yaml');
+      expect(parseYaml(yaml, { version: '1.1' })).toBeTypeOf('object');
     }
   });
 });

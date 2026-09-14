@@ -1,0 +1,94 @@
+id: https://example.org/basic
+name: basic
+default_prefix: basic
+default_range: string
+prefixes:
+  linkml: https://w3id.org/linkml/
+  basic: https://example.org/basic/
+  catalog: https://example.org/system/catalog/
+  community: https://example.org/system/community/
+imports:
+  - linkml:types
+
+classes:
+
+  Character:
+    description: a person or droid in the archive
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      homeworld:
+        range: Planet
+      films:
+        range: Film
+        multivalued: true
+      popularityRank:
+        range: integer
+        annotations:
+          system: Community
+
+  Planet:
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      climate:
+        range: ClimateEnum
+
+  Film:
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      title: {}
+      releasedOn:
+        range: date
+      characters:
+        range: Character
+        multivalued: true
+
+  Starship:
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      crewSize:
+        range: integer
+        annotations:
+          note: is this seats or minimum crew
+      pilots:
+        range: Character
+        multivalued: true
+
+  CharacterPage:
+    description: the community wiki's version
+    annotations:
+      system: Community
+    close_mappings:
+      - catalog:Character
+    attributes:
+      slug:
+        identifier: true
+      characterId:
+        annotations:
+          joins_to: Character.id
+      summary:
+        description: free text, written by editors
+      editCount:
+        range: integer
+
+enums:
+  ClimateEnum:
+    permissible_values:
+      arid:
+      temperate:
+      frozen:
+      unknown:

@@ -1,0 +1,124 @@
+id: https://example.org/systems
+name: systems
+default_prefix: systems
+default_range: string
+prefixes:
+  linkml: https://w3id.org/linkml/
+  systems: https://example.org/systems/
+  catalog: https://example.org/system/catalog/
+  circulation: https://example.org/system/circulation/
+  website: https://example.org/system/website/
+imports:
+  - linkml:types
+
+classes:
+
+  Book:
+    description: a physical copy on a shelf
+    annotations:
+      system: Catalog
+    attributes:
+      isbn:
+        identifier: true
+      title: {}
+      format:
+        range: FormatEnum
+      status:
+        range: BookStatusEnum
+        annotations:
+          note: do we track reserved separately
+      author:
+        range: Author
+      subjects:
+        range: SubjectsEnum
+        multivalued: true
+      pageCount:
+        range: integer
+
+  Author:
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      born:
+        range: date
+      books:
+        range: Book
+        multivalued: true
+
+  Loan:
+    annotations:
+      system: Circulation
+      note: should this live in Catalog instead
+    attributes:
+      book:
+        range: Book
+      member:
+        range: Member
+      dueOn:
+        range: date
+      overdue:
+        range: boolean
+      status:
+        description: is this the loan or the book?
+        range: LoanStatusEnum
+        annotations:
+          note: ask the desk staff
+
+  Member:
+    annotations:
+      system: Circulation
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      email: {}
+      loans:
+        range: Loan
+        multivalued: true
+      newsletter:
+        range: boolean
+        annotations:
+          system: Website
+
+  BookListing:
+    description: what the public site shows
+    annotations:
+      system: Website
+    close_mappings:
+      - catalog:Book
+    attributes:
+      slug:
+        identifier: true
+      bookIsbn:
+        annotations:
+          joins_to: Book.isbn
+      blurb:
+        description: editorial summary
+      hits:
+        range: integer
+      format:
+        range: FormatEnum
+
+enums:
+  FormatEnum:
+    permissible_values:
+      hardback:
+      paperback:
+      audio:
+  BookStatusEnum:
+    permissible_values:
+      available:
+      loaned:
+      lost:
+  SubjectsEnum:
+    permissible_values:
+      fiction:
+      history:
+      science:
+  LoanStatusEnum:
+    permissible_values:
+      open:
+      returned:
