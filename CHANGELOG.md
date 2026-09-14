@@ -9,10 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `toSkiss(document)` prints a `Document` as canonical Skiss text: the notation
+  itself in one layout, which is the second half of a projection from LinkML.
 - `fromLinkML(schema)` projects a LinkML schema object into a Skiss `Document`,
   the canonical Skiss text it printed, and a `Dropped[]` report of everything
   the projection could not carry (SPEC §8). `formatDropped` writes that report
   as the §8 one-line summary.
+- `importLinkML(text)` is the whole path from LinkML text to Skiss text in one
+  call: it reads the YAML (JSON is YAML), projects the schema, and returns the
+  sketch, the report and the diagnostics the sketch it wrote has. A text that
+  is not YAML is one `E_NOT_YAML` error and no output; it never throws.
+- The `skiss import` command: `skiss import <file> [-o path] [--strict]`, `-`
+  for standard input. The SPEC §8 report goes to standard error before the
+  diagnostics, whether or not `--strict` was given, and `--strict` also exits 1
+  when anything was dropped.
 
 ## [0.2.1] - 2026-09-14
 

@@ -26,9 +26,11 @@ Stop after 7 and use it before going further.
 
 `toLinkML` with SPEC §5.3 as the golden file, `skiss compile`, and the Python job in CI that validates every generated fixture with the real LinkML toolchain.
 
-## Milestone 3: LinkML to Skiss
+## Milestone 3: LinkML to Skiss (0.3.0)
 
 Read an existing LinkML schema and project it into Skiss (SPEC §8), reporting what was dropped. This is how a data model that already exists becomes something you can put in front of people and discuss.
+
+Done: `toSkiss`, `fromLinkML`, `importLinkML` and the `skiss import` command. The release itself is its own PR.
 
 ## Later, unscheduled
 
