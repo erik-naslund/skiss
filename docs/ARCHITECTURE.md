@@ -13,14 +13,16 @@ Anything that renders Skiss live, edits it, or embeds it in another tool is a se
 ```
 skiss/
   src/
-    index.ts          # public API: parse, resolve, generators, serialize
+    index.ts          # public API: parse, resolve, compile, generators, formatDiagnostic
     ast.ts            # Document, ClassNode, FieldNode, Diagnostic
-    parse.ts          # per-line parser, no cross-line state
+    parse.ts          # per-line parser; the only cross-line state is the current class
     resolve.ts        # cross-line pass: links, duplicates, warnings
+    compile.ts        # source -> { output, diagnostics } in one call
+    diagnostics.ts    # formatDiagnostic: the file:line:col text form
     generators/
-      linkml.ts       # Document -> LinkML schema object
       mermaid.ts      # Document -> Mermaid classDiagram string
-    serialize.ts      # schema object -> YAML / JSON
+      linkml.ts       # Document -> LinkML schema object (0.2.0)
+    serialize.ts      # schema object -> YAML / JSON (0.2.0)
     cli.ts            # the `skiss` command (Node only)
   test/
     fixtures/         # golden files, see Testing
@@ -56,11 +58,15 @@ Generators return data where the target is structured. `toLinkML` returns a plai
 
 ```ts
 export function parse(source: string): Document;
-export function resolve(doc: Document): Document;          // adds links and warnings, never removes
-export function toLinkML(doc: Document, opts: { schemaName: string }): LinkMLSchema;
+export function resolve(doc: Document): ResolvedDocument;   // adds links and warnings, never removes
 export function toMermaid(doc: Document, opts?: { notes?: boolean }): string;
-export function serialize(schema: LinkMLSchema, format: 'yaml' | 'json'): string;
 export function compile(source: string, opts: CompileOptions): { output: string; diagnostics: Diagnostic[] };
+export function formatDiagnostic(d: Diagnostic, file?: string): string;   // file:line:col: severity CODE message
+export const VERSION: string;
+
+// 0.2.0
+export function toLinkML(doc: Document, opts: { schemaName: string }): LinkMLSchema;
+export function serialize(schema: LinkMLSchema, format: 'yaml' | 'json'): string;
 ```
 
 `parse` never throws and never returns null. It returns whatever it could read plus diagnostics.
