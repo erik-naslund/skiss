@@ -1,0 +1,15 @@
+Character @Catalog                      # a person or droid in the archive
+  id*
+  name
+  homeworld: Planet
+  popularityRank: int @Community        ? do we actually want this here
+
+Planet @Catalog
+  id*
+  name
+  climate: arid|temperate|frozen|unknown
+
+CharacterPage @Community ~ Character    # the community wiki's version
+  slug*
+  characterId = Character.id
+  editCount: int
