@@ -126,6 +126,8 @@ Checked against a real Mermaid parser. The three surprises are marked.
 
 Output order: classes, undeclared placeholders, notes, relations. Two-space indentation, no trailing whitespace, one trailing newline.
 
+**Empty document.** A document with no classes produces the single line `classDiagram`. Mermaid refuses to parse a class diagram with no statements, and nothing in scope can be added to make it parse (a `direction` hint is layout). Anything that renders live must special-case an empty buffer: show nothing, not a Mermaid error.
+
 ## LinkML mapping
 
 SPEC §5. The worked example in §5.3 is a golden test.
