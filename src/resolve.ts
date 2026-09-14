@@ -118,6 +118,24 @@ export function resolve(doc: Document): ResolvedDocument {
         );
       } else if (field.type?.kind === 'class') {
         reference(field.type.name);
+      } else if (field.type?.kind === 'enum') {
+        // SPEC §3.4: the values of one inline enum are a set. Both generators
+        // already keep the first of a repeated value — LinkML keys its
+        // permissible values by the value — so the second is nothing the
+        // sketch can mean, and it is the only fact about one line that needs
+        // a second token to see. The node stays as written, as it does for a
+        // duplicated class.
+        const seen = new Set<string>();
+        for (const value of field.type.values) {
+          if (seen.has(value.text)) {
+            warn(
+              'W_DUPLICATE_ENUM_VALUE',
+              `value \`${value.text}\` is already in this enum; it is carried once`,
+              value,
+            );
+          }
+          seen.add(value.text);
+        }
       }
 
       if (field.joinsTo !== undefined) {

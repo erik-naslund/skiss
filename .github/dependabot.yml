@@ -1,0 +1,21 @@
+# Issue #53, S4. The workflows pin every action by commit SHA, which only
+# stays current if something proposes the updates; npm is here for the same
+# reason. Grouped, so an update is one pull request to review rather than one
+# per dependency.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dependencies:
+        patterns: ['*']

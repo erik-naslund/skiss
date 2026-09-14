@@ -1,8 +1,12 @@
 name: Release
 
 # Publishes the package to npm when a version tag is pushed (docs/RELEASING.md).
-# On pull requests that touch this file the same job runs `npm publish --dry-run`
-# instead, so CI proves the packed contents before a tag ever exists.
+# Tags only: this file used to also run on pull requests that changed it, with
+# `npm publish --dry-run` in place of the publish, but a dry run of a version
+# that is already on npm fails ("You cannot publish over the previously
+# published versions"), which is every pull request between two releases. What
+# that run actually proved is the packed contents, and the Package job of
+# ci.yml now proves those on every pull request instead (issue #53, S1).
 #
 # Publishing uses npm trusted publishing: npmjs.com is configured to accept
 # this repository's `release.yml` as a publisher and the job authenticates
@@ -11,8 +15,6 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
-  pull_request:
-    paths: ['.github/workflows/release.yml']
 
 permissions:
   contents: read
@@ -23,13 +25,13 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up pnpm (version from packageManager)
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       - name: Set up Node 22 with the npm registry
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -40,11 +42,18 @@ jobs:
       - run: npm --version
 
       - run: pnpm install --frozen-lockfile
+
+      # No pip install in the job that holds the OIDC token: the LinkML gate
+      # runs on every pull request and on main, in its own job, and installing
+      # a third-party toolchain here would run its build code next to the
+      # credential that publishes the package (issue #53, S3).
       - run: pnpm verify
+        env:
+          SKISS_SKIP_LINKML: '1'
+
       - run: pnpm build
 
       - name: Check that the tag matches package.json
-        if: github.event_name == 'push'
         run: |
           version="$(node -p "require('./package.json').version")"
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
@@ -52,32 +61,12 @@ jobs:
             exit 1
           fi
 
+      # The same check the Package job of ci.yml runs on every pull request
+      # (issue #53, S1), so what is proved there is what is published here.
       - name: Check the packed contents
-        # The tarball must hold dist/, package.json, README.md and LICENSE, nothing else.
-        run: |
-          files="$(npm pack --dry-run --json | node -p '
-            JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map((f) => f.path).join("\n")
-          ')"
-          echo "$files"
-          bad="$(echo "$files" | grep -Ev '^(dist/.+|package\.json|README\.md|LICENSE)$' || true)"
-          if [ -n "$bad" ]; then
-            echo "::error::unexpected files in the package tarball:"
-            echo "$bad"
-            exit 1
-          fi
-          for required in dist/index.js dist/index.d.ts dist/cli.js dist/cli.d.ts package.json README.md LICENSE; do
-            if ! echo "$files" | grep -qx "$required"; then
-              echo "::error::$required is missing from the package tarball"
-              exit 1
-            fi
-          done
-
-      - name: Publish (dry run)
-        if: github.event_name == 'pull_request'
-        run: npm publish --dry-run --access public
+        run: scripts/check-package.sh
 
       - name: Publish
-        if: github.event_name == 'push'
         # `--provenance=false` because provenance requires a public source
         # repository; drop the flag once this repository is public.
         run: npm publish --access public --provenance=false

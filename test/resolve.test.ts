@@ -353,6 +353,43 @@ describe('W_DUPLICATE_CLASS and W_DUPLICATE_FIELD (D1)', () => {
   });
 });
 
+describe('W_DUPLICATE_ENUM_VALUE (SPEC §3.4; issue #53, S8)', () => {
+  test('the second occurrence carries the warning, on the value', () => {
+    const out = resolve(parse('Task\n  status: open|open|done\n'));
+    expect(warnings(out)).toEqual([
+      {
+        severity: 'warning',
+        code: 'W_DUPLICATE_ENUM_VALUE',
+        message: 'value `open` is already in this enum; it is carried once',
+        line: 2,
+        col: 15,
+        end: 19,
+      },
+    ]);
+  });
+
+  test('the node is kept as written: the enum still has both values', () => {
+    const out = resolve(parse('Task\n  status: open|open|done\n'));
+    const type = out.classes[0]?.fields[0]?.type;
+    expect(type?.kind === 'enum' && type.values.map((v) => v.text)).toEqual([
+      'open',
+      'open',
+      'done',
+    ]);
+  });
+
+  test('a value repeated three times is two warnings', () => {
+    expect(codes(resolve(parse('Task\n  status: a|a|a\n')))).toEqual([
+      'W_DUPLICATE_ENUM_VALUE',
+      'W_DUPLICATE_ENUM_VALUE',
+    ]);
+  });
+
+  test('the same value in two enums is not a duplicate', () => {
+    expect(resolve(parse('A\n  s: open|done\nB\n  t: open|shut\n')).diagnostics).toEqual([]);
+  });
+});
+
 describe('W_MULTIPLE_IDENTIFIERS (SPEC §3.8, AC5)', () => {
   test('every `*` after the first is reported on the `*` and its flag cleared', () => {
     const doc = parse('Ship\n  id*\n  name\n  code*\n  serial*\n');

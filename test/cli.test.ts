@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -314,16 +314,68 @@ describe('skiss import test/fixtures/foreign.linkml.yaml (AC2, AC4)', () => {
   });
 });
 
-describe('skiss import of input that is not a schema (AC1, AC2)', () => {
-  test('a text that is not YAML writes one E_NOT_YAML error and no output', () => {
+describe('skiss import of input that is not a schema (AC1, AC2; issue #53, S6)', () => {
+  test('a text that is not YAML writes one E_NOT_YAML error, no output, and exits 2', () => {
     const r = skiss(['import', '-'], 'classes: [\n  unterminated\n');
     expect(r.stdout).toBe('');
     expect(r.stderr).toMatch(/^<stdin>:1: error E_NOT_YAML the input is not YAML: .+\n$/);
-    expect(r.status).toBe(0);
+    // Nothing was produced at all, so this is unreadable input and not a
+    // sketch with diagnostics in it.
+    expect(r.status).toBe(2);
   });
 
-  test('--strict exits 1 on that error', () => {
-    expect(skiss(['import', '--strict', '-'], 'classes: [\n').status).toBe(1);
+  test('--strict does not change that: unreadable input is 2 either way', () => {
+    expect(skiss(['import', '--strict', '-'], 'classes: [\n').status).toBe(2);
+  });
+
+  test('a schema this cannot read says why on stderr and exits 2', () => {
+    const r = skiss(['import', '-'], 'foo: bar\nbaz: 1\n');
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toBe('Not read: the schema has no `classes`.\n');
+    expect(r.status).toBe(2);
+  });
+
+  test('a YAML text that is not a mapping at all says why and exits 2', () => {
+    const r = skiss(['import', '-'], '42\n');
+    expect(r.stderr).toBe('Not read: the schema is not an object.\n');
+    expect(r.status).toBe(2);
+  });
+
+  test('a schema with an empty `classes` block was read: an empty sketch and 0', () => {
+    const r = skiss(['import', '-'], 'name: x\nclasses: {}\n');
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toBe('');
+    expect(r.status).toBe(0);
+  });
+});
+
+describe('a reader that closes the pipe early (issue #53, M2)', () => {
+  // `skiss diagram big.skiss | head` is ordinary use. The output has to be
+  // bigger than the pipe buffer for the write to still be going when the
+  // reader leaves, so the sketch here is generated rather than a fixture.
+  const big = (): string => {
+    let text = '';
+    for (let c = 0; c < 2000; c++) {
+      text += `Class${c}\n`;
+      for (let f = 0; f < 10; f++) text += `  field${f}: int\n`;
+    }
+    return text;
+  };
+
+  test.each(['diagram', 'compile'])('`skiss %s - | head -2` exits 0 with no stack trace', (cmd) => {
+    const file = join(tmp, 'big.skiss');
+    writeFileSync(file, big());
+    const r = spawnSync(
+      '/bin/sh',
+      ['-c', `"$1" "$2" ${cmd} "$3" | head -2`, 'sh', process.execPath, cli, file],
+      {
+        cwd: root,
+        encoding: 'utf8',
+      },
+    );
+    if (r.error) throw r.error;
+    expect(r.stderr).toBe('');
+    expect(r.status).toBe(0);
   });
 });
 

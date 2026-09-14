@@ -59,7 +59,7 @@ describe('importLinkML (AC1)', () => {
     expect(result.output).toBe('');
     expect(result.diagnostics).toEqual([]);
     expect(result.dropped).toEqual([
-      { kind: 'schema', element: 'schema', detail: 'the schema is not an object' },
+      { kind: 'unreadable', element: 'schema', detail: 'the schema is not an object' },
     ]);
   });
 

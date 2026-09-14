@@ -53,6 +53,19 @@ classes:
         annotations:
           joins_to: Person.fullName
 
+  Voyage:
+    attributes:
+      id:
+        identifier: true
+      status:
+        range: StatusEnum
+
   Ghost:
     annotations:
       undeclared: true
+
+enums:
+  StatusEnum:
+    permissible_values:
+      planned:
+      sailing:

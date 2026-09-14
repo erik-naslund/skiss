@@ -2,6 +2,8 @@
 
 **Specification, version 0.1**
 
+*Applies to skiss 0.3.0.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
+
 A notation for sketching data models. It compiles to LinkML. The reasoning behind the rules is in [DESIGN.md](DESIGN.md); this document only says what the language is.
 
 ---
@@ -99,6 +101,8 @@ climate: arid|temperate|frozen|unknown
 
 Two or more values separated by `|`. A single value without a pipe is an unknown type (§3.2).
 
+The values are a set: a value written twice in one enum is a warning (`W_DUPLICATE_ENUM_VALUE`, listed with the other codes in [ARCHITECTURE.md](ARCHITECTURE.md)), the line is kept as written, and the enum carries the value once.
+
 ### 3.5 `@` marks the owning system
 
 Valid on a class line and on a field line.
@@ -194,6 +198,8 @@ WS           = one or more spaces or tabs ;
 ```
 
 Modifier order on a field line is fixed as written.
+
+**Whitespace.** A space and a tab are the same character to the grammar. Between tokens it is not significant and any amount of it is allowed: `name : int`, `name:int` and `films: Film []` all read as the same line. `[]` is one token, so `Person[ ]` is an unclosed `[`. What is significant is the whitespace at the start of a line, which is what makes the line a field of the class above it; one or more spaces or tabs, and no further meaning is given to how many. Trailing whitespace is not part of a name, a type or a trailer text. A line that is empty or holds only whitespace is a blank line and is skipped.
 
 Every line parses independently of every other line. Facts that involve more than one line (a referenced class exists, a name is duplicated) are established afterwards and produce warnings only (§7).
 
@@ -405,7 +411,7 @@ Dropped: pattern on 1 slot. Renamed: 6 names. Inlined: 1 enum.
 
 A projection that dropped nothing reports an empty line, not a line saying that nothing was dropped.
 
-**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity for every document LinkML carries whole. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
+**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`) and a column-0 comment, which no document node holds, does not survive. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
 
 ### 8.1 Editing a projected schema
 

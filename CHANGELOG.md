@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `skiss diagram model.skiss | head` no longer dies with a Node stack trace and
+  exit 1 when the reader closes the pipe. A closed pipe is not a failure of the
+  command: it exits 0.
+- `skiss import` of a file that is not a schema says what it could not read
+  ("Not read: the schema has no `classes`.") instead of reporting it as one
+  dropped schema key, and exits 2 rather than 0, since it produced no sketch.
+- `fromLinkML` no longer stringifies an annotation value it cannot read: a tag
+  written with no value, a number or a list becomes a report saying what was
+  found, where it used to become the system `@null` or the doubt `? undefined`.
+- A schema named `__proto__` compiled to LinkML whose `default_prefix` was
+  missing from `prefixes`, which LinkML refuses. The name-keyed maps of the
+  LinkML generator hold such a key, and a schema or system name that is one of
+  `__proto__`, `constructor` or `prototype` takes a trailing `_` as the names
+  `linkml:types` binds already do.
+- The one-line import report no longer prints the projection's own vocabulary:
+  `1 narrowed range` and `1 enum detail`, not `narrowed on 1 slot` and
+  `enum_detail on 1 enum`.
+
+### Added
+
+- `W_DUPLICATE_ENUM_VALUE`: a value written twice in one inline enum is a
+  warning. The line is kept as written and the enum carries the value once.
+
 ## [0.3.0] - 2026-09-14
 
 LinkML to Skiss. An existing schema becomes a sketch you can put in front of
@@ -89,5 +114,8 @@ First release. Skiss to Mermaid. Published as `@eriknaslund/skiss`; the command 
 - The `skiss` command: `skiss diagram <file> [-o path] [--notes] [--strict]`,
   `-` for standard input, diagnostics on standard error.
 
-[Unreleased]: https://github.com/erik-naslund/skiss/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/erik-naslund/skiss/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/erik-naslund/skiss/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/erik-naslund/skiss/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/erik-naslund/skiss/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/erik-naslund/skiss/releases/tag/v0.1.0
