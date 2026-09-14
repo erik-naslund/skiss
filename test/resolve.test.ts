@@ -221,6 +221,48 @@ describe('W_UNDECLARED_CLASS and `undeclared` (SPEC §3.2, AC4)', () => {
     expect(out.undeclared).toEqual([]);
   });
 
+  test('a capitalised primitive is hinted: `: Int` suggests `int` (issue #40)', () => {
+    const [w] = warnings(resolve(parse('Team\n  players: Int\n')));
+    expect(w).toEqual({
+      severity: 'warning',
+      code: 'W_UNDECLARED_CLASS',
+      message: 'class `Int` is not declared. Did you mean `int`?',
+      line: 2,
+      col: 11,
+      end: 14,
+    });
+  });
+
+  test('the hint names the alias as written: `: Boolean` suggests `boolean` (issue #40)', () => {
+    const [w] = warnings(resolve(parse('Team\n  active: Boolean\n')));
+    expect(w).toMatchObject({
+      code: 'W_UNDECLARED_CLASS',
+      message: 'class `Boolean` is not declared. Did you mean `boolean`?',
+    });
+  });
+
+  test('a class name that is not a primitive keeps the plain message (issue #40)', () => {
+    const [w] = warnings(resolve(parse('Ship\n  homeworld: Planet\n')));
+    expect(w).toMatchObject({
+      code: 'W_UNDECLARED_CLASS',
+      message: 'class `Planet` is not declared',
+    });
+  });
+
+  test('a name that only inherits from Object keeps the plain message (issue #40)', () => {
+    const [w] = warnings(resolve(parse('Ship\n  builder: Constructor\n')));
+    expect(w).toMatchObject({
+      code: 'W_UNDECLARED_CLASS',
+      message: 'class `Constructor` is not declared',
+    });
+  });
+
+  test('a hinted reference still falls back to a placeholder class (issue #40)', () => {
+    const out = resolve(parse('Team\n  players: Int\n'));
+    expect(out.undeclared).toEqual([{ text: 'Int', line: 2, col: 11, end: 14 }]);
+    expect(out.classes[0]?.fields[0]?.type).toMatchObject({ kind: 'class', many: false });
+  });
+
   test('D2: `= X.f` with X undeclared is W_UNDECLARED_CLASS only', () => {
     expect(codes(resolve(parse('A\n  x = Ghost.id\n')))).toEqual(['W_UNDECLARED_CLASS']);
   });

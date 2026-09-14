@@ -80,7 +80,7 @@ A field without a colon has the type `string`.
 
 **Any other lowercase word after the colon is an unknown type.** It produces a warning, and the field is treated as `string`.
 
-**A reference to a class that is not declared** produces a warning. The reference is kept, and the LinkML output contains a stub for the class (§5.1).
+**A reference to a class that is not declared** produces a warning. The reference is kept, and the LinkML output contains a stub for the class (§5.1). When the name is a primitive written with a capital, such as `Int` or `Boolean`, the warning says which primitive was meant; the name is still read as a class.
 
 ### 3.3 `[]` means many
 

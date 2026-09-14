@@ -100,7 +100,7 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 | `E_UNCLOSED_MANY` | error | `[` without `]`. |
 | `E_BAD_NAME` | error | A class name not in UpperCamelCase, or a field name not in lowerCamelCase. |
 | `W_UNKNOWN_TYPE` | warning | Lowercase type that is not a primitive and has no `\|`. Falls back to string. Suggests a primitive when the edit distance is small. |
-| `W_UNDECLARED_CLASS` | warning | `: X`, `~ X` or `= X.f` where X is not declared. |
+| `W_UNDECLARED_CLASS` | warning | `: X`, `~ X` or `= X.f` where X is not declared. Suggests the primitive when X is one written with a capital. |
 | `W_UNDECLARED_FIELD` | warning | `= X.f` where X exists but has no field f. |
 | `W_DUPLICATE_CLASS` | warning | Two classes with the same name. |
 | `W_DUPLICATE_FIELD` | warning | Two fields with the same name in one class. |
