@@ -21,6 +21,14 @@ test('mermaid.parse rejects a malformed class diagram, so a pass below means som
   await expect(mermaid.parse('classDiagram\n  class {\n')).rejects.toThrow();
 });
 
+// Pins a known limitation, not a requirement: `toMermaid(parse(''))` is
+// `classDiagram` alone, and Mermaid 12 refuses every zero-statement class
+// diagram, so a renderer must special-case an empty buffer. If a Mermaid
+// upgrade starts accepting it, this test fails and the limitation can go.
+test('the empty document is rejected by Mermaid 12', async () => {
+  await expect(mermaid.parse(toMermaid(parse('')))).rejects.toThrow();
+});
+
 describe.each(FIXTURES)('%s', (name) => {
   test(`${name}.mmd parses with Mermaid`, async () => {
     const result = await mermaid.parse(fixture(`${name}.mmd`));

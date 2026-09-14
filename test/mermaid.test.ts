@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { parse, resolve, toMermaid } from '../src/index.ts';
+import { mulberry32 } from './mulberry32.ts';
 
 // Issue #5. The fixtures cover the mapping table with `notes` off; these
 // cover what they express badly: the `notes: true` lines and their place in
@@ -54,6 +55,29 @@ describe('`notes: true` (AC4)', () => {
     ]);
   });
 
+  test('placeholders reached via `~`, `:` and `=` come in first-reference order, then the relations', () => {
+    expect(mmd('A ~ G1\n  x: G2\n  y = G3.z\n')).toEqual([
+      'classDiagram',
+      '  class A {',
+      '    +G2 x',
+      '    +y',
+      '  }',
+      '  class G1 {',
+      '    <<undeclared>>',
+      '  }',
+      '  class G2 {',
+      '    <<undeclared>>',
+      '  }',
+      '  class G3 {',
+      '    <<undeclared>>',
+      '  }',
+      '  A ..> G1 : similar',
+      '  A --> G2 : x',
+      '  A ..> G3 : y = z',
+      '',
+    ]);
+  });
+
   test('double quotes inside a doubt become single quotes', () => {
     expect(mmd('Planet\n  climate: arid|frozen ? "temperate" was contested\n', true)).toContain(
       '  note for Planet "climate: \'temperate\' was contested"',
@@ -62,6 +86,18 @@ describe('`notes: true` (AC4)', () => {
 
   test('with notes off, no `note for` line is emitted', () => {
     expect(mmd(source).some((l) => l.includes('note for'))).toBe(false);
+  });
+});
+
+describe('members', () => {
+  test('a typed identifier is `*int code`: `*` replaces `+`, the type stays in front', () => {
+    expect(mmd('A\n  code*: int\n')).toEqual([
+      'classDiagram',
+      '  class A {',
+      '    *int code',
+      '  }',
+      '',
+    ]);
   });
 });
 
@@ -114,15 +150,9 @@ describe('shape of the output (AC3, AC6)', () => {
 
 describe('never throws', () => {
   test('random documents from the parser produce a string', () => {
-    // The same seeded generator as never-throws.test.ts, so the corpus is stable.
-    let a = 20260915 >>> 0;
-    const random = (): number => {
-      a = (a + 0x6d2b79f5) >>> 0;
-      let t = a;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
+    // The PRNG shared with never-throws.test.ts, under its own seed: the
+    // corpus is reproducible but not the same one as there.
+    const random = mulberry32(20260915);
     const alphabet = [...' \t\n#?*:@~=[]|.<>"\'\\-_0123456789abcXYZäé😀'];
     for (let i = 0; i < 500; i++) {
       let s = '';
