@@ -4,7 +4,7 @@ How the Skiss code is organised. The language is in [SPEC.md](SPEC.md), the reas
 
 ## What this repository is
 
-The language specification, the library that parses and compiles it, and a command-line tool. Published as one npm package, `skiss`.
+The language specification, the library that parses and compiles it, and a command-line tool. Published as one npm package, `@eriknaslund/skiss` (ADR 0009); the command it installs is `skiss`.
 
 Anything that renders Skiss live, edits it, or embeds it in another tool is a separate project that depends on this package. This repository does not know about them. Its job is to give them a library they can trust: browser-safe, dependency-light, never throwing on bad input.
 
