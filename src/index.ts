@@ -28,6 +28,7 @@ export {
   toLinkML,
 } from './generators/linkml.ts';
 export { type MermaidOptions, toMermaid } from './generators/mermaid.ts';
+export { toSkiss } from './generators/skiss.ts';
 export { parse } from './parse.ts';
 export { type ResolvedDocument, resolve } from './resolve.ts';
 export { type SerializeFormat, serialize } from './serialize.ts';
