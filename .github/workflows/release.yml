@@ -1,10 +1,12 @@
 name: Release
 
 # Publishes the package to npm when a version tag is pushed (docs/RELEASING.md).
-# On pull requests that touch this file the same job runs `npm publish --dry-run`
-# instead, so the publishing path itself is exercised before a tag exists. The
-# packed contents are checked here and, on every pull request, by the Package
-# job of ci.yml.
+# Tags only: this file used to also run on pull requests that changed it, with
+# `npm publish --dry-run` in place of the publish, but a dry run of a version
+# that is already on npm fails ("You cannot publish over the previously
+# published versions"), which is every pull request between two releases. What
+# that run actually proved is the packed contents, and the Package job of
+# ci.yml now proves those on every pull request instead (issue #53, S1).
 #
 # Publishing uses npm trusted publishing: npmjs.com is configured to accept
 # this repository's `release.yml` as a publisher and the job authenticates
@@ -13,8 +15,6 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
-  pull_request:
-    paths: ['.github/workflows/release.yml']
 
 permissions:
   contents: read
@@ -54,7 +54,6 @@ jobs:
       - run: pnpm build
 
       - name: Check that the tag matches package.json
-        if: github.event_name == 'push'
         run: |
           version="$(node -p "require('./package.json').version")"
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
@@ -67,12 +66,7 @@ jobs:
       - name: Check the packed contents
         run: scripts/check-package.sh
 
-      - name: Publish (dry run)
-        if: github.event_name == 'pull_request'
-        run: npm publish --dry-run --access public
-
       - name: Publish
-        if: github.event_name == 'push'
         # `--provenance=false` because provenance requires a public source
         # repository; drop the flag once this repository is public.
         run: npm publish --access public --provenance=false
