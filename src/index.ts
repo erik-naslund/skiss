@@ -10,6 +10,7 @@ export type {
   Severity,
   TypeRef,
 } from './ast.ts';
+export { type MermaidOptions, toMermaid } from './generators/mermaid.ts';
 export { parse } from './parse.ts';
 export { type ResolvedDocument, resolve } from './resolve.ts';
 
