@@ -34,3 +34,4 @@ BookListing @Website ~ Book             # what the public site shows
   bookIsbn = Book.isbn
   blurb                                 # editorial summary
   hits: int
+  format: hardback|paperback|audio

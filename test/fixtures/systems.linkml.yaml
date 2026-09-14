@@ -99,6 +99,8 @@ classes:
         description: editorial summary
       hits:
         range: integer
+      format:
+        range: FormatEnum
 
 enums:
   FormatEnum:

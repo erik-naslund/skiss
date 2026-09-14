@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { parse as parseYaml } from 'yaml';
 import { parse, serialize, toLinkML } from '../src/index.ts';
 
 // Issue #23, AC5 and AC8: the rules the fixtures express badly, each named
@@ -29,6 +30,19 @@ describe('SPEC §5.1, enum naming', () => {
     expect(Object.keys(out.enums ?? {})).toEqual(['PlanetClimateEnum', 'MoonClimateEnum']);
   });
 
+  test('an enum never takes the name of a class in the same schema (review B5)', () => {
+    const out = schema('ClimateEnum\n  id*\n\nPlanet\n  climate: arid|temperate\n');
+    expect(out.classes?.Planet?.attributes?.climate?.range).toBe('ClimateEnum2');
+    expect(Object.keys(out.enums ?? {})).toEqual(['ClimateEnum2']);
+    expect(Object.keys(out.classes ?? {})).toEqual(['ClimateEnum', 'Planet']);
+  });
+
+  test('an enum never takes the name of an undeclared stub either (review B5)', () => {
+    const out = schema('Planet ~ ClimateEnum\n  climate: arid|temperate\n');
+    expect(out.classes?.ClimateEnum).toEqual({ annotations: { undeclared: true } });
+    expect(Object.keys(out.enums ?? {})).toEqual(['ClimateEnum2']);
+  });
+
   test('an enum is emitted once, at its first use, with its values as written', () => {
     const out = schema('Moon\n  climate: frozen|arid\n\nPlanet\n  climate: frozen|arid\n');
     expect(out.enums?.ClimateEnum?.permissible_values).toEqual({ frozen: null, arid: null });
@@ -52,6 +66,23 @@ describe('SPEC §5.1, mapping prefix', () => {
     const out = schema('CharacterPage @Community ~ Ghost\n  slug*\n', 'galaxy');
     expect(out.classes?.CharacterPage?.close_mappings).toEqual(['galaxy:Ghost']);
     expect(out.classes?.Ghost).toEqual({ annotations: { undeclared: true } });
+  });
+});
+
+describe('SPEC §3.2, primitives and aliases', () => {
+  test.each([
+    ['string', 'string'],
+    ['text', 'string'],
+    ['int', 'integer'],
+    ['integer', 'integer'],
+    ['float', 'float'],
+    ['bool', 'boolean'],
+    ['boolean', 'boolean'],
+    ['date', 'date'],
+    ['datetime', 'datetime'],
+    ['uri', 'uri'],
+  ])('`: %s` compiles to `range: %s`', (written, range) => {
+    expect(schema(`Ship\n  f: ${written}\n`).classes?.Ship?.attributes?.f?.range).toBe(range);
   });
 });
 
@@ -115,6 +146,37 @@ describe('SPEC §5.2, an empty document', () => {
     });
   });
 
+  test('a normalised name that is empty or starts with a digit takes a `_` (AC4, review B4)', () => {
+    for (const [given, expected] of [
+      ['2024-inventory', '_2024_inventory'],
+      ['123', '_123'],
+      ['', '_'],
+    ]) {
+      const named = schema('', given);
+      // LinkML rejects a name that does not match `^[a-zA-Z_][\w.-]*$`. The
+      // empty name normalises to the bare `_`, which is a valid name but not
+      // a usable prefix: RDF reserves `_` for blank nodes, so `gen-python`
+      // rejects `default_prefix: _`. Reported on PR #30, not decided here.
+      expect(named.name).toBe(expected);
+      expect(named.default_prefix).toBe(expected);
+      expect(named.id).toBe(`https://example.org/${expected}`);
+      expect(named.prefixes[named.default_prefix]).toBe(`https://example.org/${expected}/`);
+    }
+  });
+
+  test('a schema name that is an `Object.prototype` key still has a prefix (review B3)', () => {
+    const named = schema('', 'constructor');
+    expect(named.default_prefix).toBe('constructor');
+    expect(Object.hasOwn(named.prefixes, 'constructor')).toBe(true);
+    expect(named.prefixes[named.default_prefix]).toBe('https://example.org/constructor/');
+  });
+
+  test('a system named after an `Object.prototype` key still has a prefix (review B3)', () => {
+    const named = schema('Ship @Constructor\n  id*\n', 'sketch');
+    expect(Object.hasOwn(named.prefixes, 'constructor')).toBe(true);
+    expect(named.prefixes.constructor).toBe('https://example.org/system/constructor/');
+  });
+
   test('serialises to YAML with no `classes` or `enums` section', () => {
     expect(serialize(out, 'yaml')).toBe(
       [
@@ -130,6 +192,32 @@ describe('SPEC §5.2, an empty document', () => {
         '',
       ].join('\n'),
     );
+  });
+});
+
+describe('issue #23, AC2: LinkML reads the file as YAML 1.1 (review B1, B2)', () => {
+  // PyYAML, which LinkML parses with, is YAML 1.1: `yes`, `null`, `1.0`,
+  // `12:30` and `on` are not strings there unless they are quoted.
+  const roundTrip = (description: string): unknown => {
+    const out = schema(`Ship\n  d # ${description}\n`);
+    expect(out.classes?.Ship?.attributes?.d?.description).toBe(description);
+    const back = parseYaml(serialize(out, 'yaml'), { version: '1.1' }) as {
+      classes: { Ship: { attributes: { d: { description: unknown } } } };
+    };
+    return back.classes.Ship.attributes.d.description;
+  };
+
+  test.each(['yes', 'null', '1.0', '12:30', 'on'])(
+    'a description of `%s` parses back as the string it was written as',
+    (description) => {
+      expect(roundTrip(description)).toBe(description);
+    },
+  );
+
+  test('a description with a tab is double-quoted, which PyYAML can read', () => {
+    const out = schema('Ship\n  d # tab\there\n');
+    expect(serialize(out, 'yaml')).toContain('description: "tab\\there"');
+    expect(roundTrip('tab\there')).toBe('tab\there');
   });
 });
 
