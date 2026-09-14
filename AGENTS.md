@@ -225,13 +225,26 @@ is the **only shared memory** between them.
 
 ## 11. When unsure
 
-Do **not** invent. If the spec is ambiguous or a decision needs product
-judgment:
+Do **not** invent. But a worker also does **not** stop to ask: nobody is
+watching a worker session, and a session that ends its turn with a
+question shows up as a question to the product owner, which Section 13
+forbids. If the spec is ambiguous or a decision needs judgment:
 
-1. Write the question down: in the issue, and in `docs/SPEC.md` §9 (Open
-   questions) if it is a language question.
-2. Surface it explicitly, in your reply and in the PR description.
-3. Pause that thread of work until it is answered.
+1. Pick the reading closest to the issue text and the spec, and continue.
+2. Record it on the PR under **Assumptions made** as a vetoable working
+   default: what you chose, what the alternative was, why.
+3. If it is a language question, also add it to `docs/SPEC.md` §9 (Open
+   questions) in the same PR.
+
+Stop only when no default could make the work useful: the issue is
+impossible as written, or a fixture contradicts the spec in a way the
+spec does not settle. Then say exactly that in the PR description and end
+the turn; the tech lead reads PRs, not session transcripts.
+
+A worker never subscribes to its own PR, never schedules check-ins or
+reminders for itself, and never wakes itself up later. The tech lead
+watches the PR. When the PR is open and CI is green, the worker's job is
+finished.
 
 There is deliberately no "explain mode". Keep tutorials out of the code
 and PRs; put understanding into the docs.
