@@ -1,7 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import type { Diagnostic } from '../src/index.ts';
-import { compile, formatDiagnostic, parse, resolve, toMermaid } from '../src/index.ts';
+import {
+  compile,
+  formatDiagnostic,
+  parse,
+  resolve,
+  serialize,
+  toLinkML,
+  toMermaid,
+} from '../src/index.ts';
 
 // Issue #6, AC6 and D4: `compile` is the whole path in one call and is what
 // the CLI calls; `formatDiagnostic` is the one-line text the CLI prints and
@@ -49,6 +57,60 @@ describe('compile (AC6)', () => {
   test('the result is plain data', () => {
     const result = compile(fixture('broken.skiss'), { target: 'mermaid' });
     expect(JSON.parse(JSON.stringify(result))).toEqual(result);
+  });
+});
+
+// Issue #24, AC1: the same call with `target: 'linkml'` is the LinkML schema
+// as text. `format` defaults to `yaml`.
+
+describe('compile to LinkML (issue #24, AC1)', () => {
+  const cases = [
+    { name: 'basic', schemaName: 'basic' },
+    { name: 'systems', schemaName: 'systems' },
+    { name: 'broken', schemaName: 'broken' },
+    { name: 'spec-example', schemaName: 'galaxy_catalogue' },
+  ];
+
+  test.each(cases)(
+    '$name.skiss: output is the .linkml.yaml fixture and diagnostics are the resolved ones',
+    ({ name, schemaName }) => {
+      const source = fixture(`${name}.skiss`);
+      const result = compile(source, { target: 'linkml', schemaName });
+      expect(result.output).toBe(fixture(`${name}.linkml.yaml`));
+      expect(result.diagnostics).toEqual(resolve(parse(source)).diagnostics);
+    },
+  );
+
+  test('`format` defaults to yaml', () => {
+    const source = fixture('systems.skiss');
+    expect(compile(source, { target: 'linkml', schemaName: 'systems' })).toEqual(
+      compile(source, { target: 'linkml', schemaName: 'systems', format: 'yaml' }),
+    );
+  });
+
+  test('`format: json` is the schema serialised as JSON', () => {
+    const source = fixture('systems.skiss');
+    const { output } = compile(source, {
+      target: 'linkml',
+      schemaName: 'systems',
+      format: 'json',
+    });
+    expect(output).toBe(
+      serialize(toLinkML(resolve(parse(source)), { schemaName: 'systems' }), 'json'),
+    );
+    expect(JSON.parse(output)).toEqual(toLinkML(parse(source), { schemaName: 'systems' }));
+  });
+
+  test('`schemaName` is normalised by the generator (SPEC §5.2)', () => {
+    const { output } = compile('', { target: 'linkml', schemaName: 'Galaxy Catalogue' });
+    expect(output).toContain('name: galaxy_catalogue\n');
+  });
+
+  test('the empty document compiles to a schema with no classes and no diagnostics', () => {
+    const { output, diagnostics } = compile('', { target: 'linkml', schemaName: 'empty' });
+    expect(diagnostics).toEqual([]);
+    expect(output).toBe(serialize(toLinkML(parse(''), { schemaName: 'empty' }), 'yaml'));
+    expect(output).not.toContain('classes:');
   });
 });
 

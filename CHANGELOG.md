@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `compile(source, { target: 'linkml', schemaName, format })`: the LinkML
+  schema as text in one call, YAML by default.
+- The `skiss compile` command:
+  `skiss compile <file> [-o path] [--json] [--name schemaName] [--strict]`,
+  `-` for standard input, diagnostics on standard error. `--name` defaults to
+  the file's basename without its extension, or `sketch` for standard input.
+
 ## [0.1.0] - 2026-09-14
 
 First release. Skiss to Mermaid. Published as `@eriknaslund/skiss`; the command is `skiss`.
