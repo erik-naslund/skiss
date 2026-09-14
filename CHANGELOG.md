@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `fromLinkML(schema)` projects a LinkML schema object into a Skiss `Document`,
+  the canonical Skiss text it printed, and a `Dropped[]` report of everything
+  the projection could not carry (SPEC §8). `formatDropped` writes that report
+  as the §8 one-line summary.
+
 ## [0.2.1] - 2026-09-14
 
 ### Added

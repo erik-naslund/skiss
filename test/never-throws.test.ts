@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { parse as parseYaml } from 'yaml';
-import { parse, resolve, serialize, toLinkML } from '../src/index.ts';
+import { formatDropped, fromLinkML, parse, resolve, serialize, toLinkML } from '../src/index.ts';
 import { mulberry32 } from './mulberry32.ts';
 
 // SPEC §7 and ADR 0004: `parse` and `resolve` never throw and never return
@@ -117,6 +117,53 @@ describe('resolve never throws (SPEC §7, ADR 0004)', () => {
       // it with.
       const yaml = serialize(toLinkML(doc, { schemaName: 'fuzz' }), 'yaml');
       expect(parseYaml(yaml, { version: '1.1' })).toBeTypeOf('object');
+    }
+  });
+});
+
+describe('fromLinkML never throws (SPEC §8)', () => {
+  test('anything at all projects to a sketch and a report', () => {
+    for (const input of [
+      null,
+      undefined,
+      7,
+      'classes: {}',
+      [],
+      {},
+      { classes: 3 },
+      { classes: { A: 'not a class' } },
+      { classes: { '': { attributes: { '': { range: {} } } } } },
+      { classes: { A: { slots: 'not a list', attributes: null } } },
+      { slots: { a: { range: '\0' } }, classes: { A: { slots: ['a', 'b'] } } },
+      { enums: { e: null }, classes: { A: { attributes: { f: { range: 'e' } } } } },
+    ]) {
+      const out = fromLinkML(input);
+      expect(typeof out.source).toBe('string');
+      expect(Array.isArray(out.dropped)).toBe(true);
+      expect(typeof formatDropped(out.dropped)).toBe('string');
+      // Whatever it read, what it writes is Skiss that parses.
+      expect(parse(out.source).diagnostics).toEqual([]);
+      expect(JSON.parse(JSON.stringify(out))).toEqual(out);
+    }
+  });
+
+  test('500 random schemas: the projection parses and says nothing was dropped', () => {
+    const random = mulberry32(20260915);
+    const pick = (n: number) => Math.floor(random() * n);
+    for (let i = 0; i < 500; i++) {
+      const length = pick(240);
+      let s = '';
+      for (let j = 0; j < length; j++) s += ALPHABET[pick(ALPHABET.length)];
+      const schema = toLinkML(parse(s), { schemaName: 'fuzz' });
+      const out = fromLinkML(schema);
+      expect(out.document.diagnostics).toEqual([]);
+      // A sketch with no classes compiles to a schema with no `classes` block,
+      // and that is the one schema a projection cannot read back (SPEC §8).
+      expect(out.dropped).toEqual(
+        schema.classes === undefined
+          ? [{ kind: 'schema', element: 'fuzz', detail: 'the schema has no `classes`' }]
+          : [],
+      );
     }
   });
 });

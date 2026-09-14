@@ -23,6 +23,7 @@ skiss/
       mermaid.ts      # Document -> Mermaid classDiagram string
       linkml.ts       # Document -> LinkML schema object (0.2.0)
       skiss.ts        # Document -> canonical Skiss text (0.3.0)
+      from-linkml.ts  # LinkML schema object -> Document + what it dropped (0.3.0)
     serialize.ts      # schema object -> YAML / JSON (0.2.0)
     cli.ts            # the `skiss` command (Node only)
   test/
@@ -50,6 +51,11 @@ Document (AST) + warnings
    │      └─▶ serialize()  → YAML or JSON text
    ├─▶ toMermaid()   → Mermaid classDiagram text
    └─▶ toSkiss()     → canonical Skiss text
+
+LinkML schema object
+   │
+   ▼  fromLinkML()   the inverse of §5.1, plus what it could not carry
+{ document, source, dropped }
 ```
 
 `parse` and `resolve` are separate on purpose. Parsing is line-local and always succeeds for the lines it can read. The one piece of state `parse` carries between lines is which class is current, so a field can attach to it and a field before any class can be reported; no line changes how another line is *read*. Resolving is where anything that needs two lines happens, and it only ever adds warnings ([ADR 0004](adr/0004-line-based-parsing-and-diagnostics.md)).
@@ -74,6 +80,8 @@ export function serialize(schema: LinkMLSchema, format: 'yaml' | 'json'): string
 
 // 0.3.0
 export function toSkiss(doc: Document): string;
+export function fromLinkML(schema: unknown): { document: Document; source: string; dropped: Dropped[] };
+export function formatDropped(dropped: Dropped[]): string;   // the SPEC §8 one-line report
 ```
 
 `parse` never throws and never returns null. It returns whatever it could read plus diagnostics.
@@ -145,6 +153,30 @@ Output order: classes, undeclared placeholders, notes, relations. Two-space inde
 
 SPEC §5. The worked example in §5.3 is a golden test.
 
+## LinkML import
+
+SPEC §8, the other direction. `fromLinkML` takes the parsed schema as a plain object — the CLI parses the YAML, the library stays browser-safe — builds a Document with zeroed positions, prints it with `toSkiss`, and parses that text back, so the document it returns carries real positions and `source` is the projection itself. It never throws: a schema it cannot read is an empty sketch and one report saying why.
+
+Every mapping is the inverse of a §5.1 row. Everything LinkML says that §5.1 has no row for is reported as a `Dropped`, never lost quietly.
+
+| `kind` | What it reports |
+|---|---|
+| the LinkML key (`is_a`, `mixins`, `pattern`, `required`, `slot_usage`, …) | that key was on the element and is not carried |
+| a key the mapping does carry (`identifier`, `multivalued`, `range`, `attributes`, `slots`) | the key was there with a value the reader cannot use; `detail` says what was found, and nothing is coerced |
+| `renamed` | a name that is not `UpperCamelCase` or `lowerCamelCase` was converted; `detail` says from what |
+| `narrowed` | a `range` no Skiss primitive covers; the word survives as an unknown type and falls back to `string` |
+| `inlined` | an enum used by several attributes, where inlining it loses the sharing |
+| `enum_detail` | a permissible value with a body of its own, or a key on the enum other than `permissible_values` |
+| `annotation` | an annotation tag §5.1 gives no meaning, or one whose value Skiss cannot write |
+| `class`, `slot` | a class or an attribute whose body is not a definition, or a global slot no class lists |
+| `enum` | an enum Skiss cannot write, so the attributes that had it as their range keep no type |
+| `unused_enum` | an enum no attribute has as its range, so it reaches the sketch nowhere |
+| `schema` | a key at schema level that is not §5.2 boilerplate, or a schema this cannot read at all |
+
+`element` names the element as the sketch names it, `Class` or `Class.field`; an enum is named as LinkML named it, since the sketch does not keep enum names. `formatDropped` counts the reports by kind into the §8 one-line report.
+
+`test/fixtures/foreign.linkml.yaml` is a schema Skiss did not write, and `foreign.skiss` and `foreign.dropped.json` beside it are what it projects to. For every fixture LinkML carries whole, Skiss → LinkML → Skiss is identity.
+
 ## Testing
 
 Fixture pairs, not unit tests of internals:
@@ -154,6 +186,7 @@ test/fixtures/
   basic.skiss     basic.linkml.yaml     basic.mmd
   systems.skiss   systems.linkml.yaml   systems.mmd
   broken.skiss    broken.diagnostics.json
+  foreign.linkml.yaml   foreign.skiss   foreign.dropped.json
 ```
 
 Golden-file comparison. When output changes on purpose, the diff is the review ([ADR 0007](adr/0007-testing-strategy.md)).

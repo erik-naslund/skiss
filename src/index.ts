@@ -19,6 +19,12 @@ export {
 } from './compile.ts';
 export { formatDiagnostic } from './diagnostics.ts';
 export {
+  type Dropped,
+  type FromLinkMLResult,
+  formatDropped,
+  fromLinkML,
+} from './generators/from-linkml.ts';
+export {
   type LinkMLAnnotations,
   type LinkMLAttribute,
   type LinkMLClass,

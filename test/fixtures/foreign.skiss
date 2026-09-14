@@ -1,0 +1,22 @@
+Trackable                               # Anything whose revisions are counted.
+  revision: int
+
+ProgrammeItem                           # An item on the programme: a talk, a break, a keynote. Everything the printed programme shows is one of these, whether or not anybody speaks at it.
+  startsAt: time
+  itemStatus: draft|scheduled|cancelled
+  recordId*                             # The identifier the programme database issues.
+  title                                 # What the programme prints for it.
+  updatedAt: datetime                   # When the row last changed.
+
+Talk                                    # A talk somebody gives.
+  speaker: Person                       # Who gives it.
+  roomCode
+  state: draft|scheduled|cancelled      # Where the talk is in the programme.
+  audienceLevel: introductory|intermediate|advanced
+  recordingUrl: uri
+
+Person                                  # Somebody who appears in the programme.
+  fullName
+  emailAddress
+  talksGiven: Talk[]
+  recordId*                             # The identifier the programme database issues.

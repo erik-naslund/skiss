@@ -51,6 +51,19 @@ lines that produce an error are absent from it too, and a class that is
 referenced but never declared is a stub carrying the `undeclared`
 annotation.
 
+**foreign** (`foreign.linkml.yaml`, `foreign.skiss`,
+`foreign.dropped.json`). The only fixture that starts as LinkML. A conference
+programme written by hand in another author's style, with everything SPEC §8
+says does not map: global slots two classes share, `is_a`, a mixin class and
+the `mixins` that use it, `slot_usage`, patterns, `required`, `unique_keys`,
+`minimum_value`, `comments`, `see_also`, a `time` range, an enum shared by two
+differently named attributes, an enum whose permissible values carry
+descriptions, snake_case names throughout, and a folded multi-line
+description. `foreign.skiss` is the sketch `fromLinkML` projects it to and
+`foreign.dropped.json` is what it reported dropping, in schema order. It is
+also under the LinkML gate, so the input is a schema the real toolchain
+accepts rather than one invented to be convenient.
+
 Every `*.linkml.yaml` fixture here is validated in CI by the real LinkML
 toolchain — `linkml-lint` and `gen-python`, from the pinned version that
 `scripts/linkml-env.sh` installs — never by a hand-written approximation

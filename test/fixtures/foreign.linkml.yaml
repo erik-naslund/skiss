@@ -1,0 +1,112 @@
+# The programme of a small conference, written by its maintainers rather than
+# by Skiss: global slots, inheritance, a mixin, constraints and snake_case
+# names. Nothing here came out of `toLinkML`.
+id: https://example.org/conference-programme
+name: conference_programme
+title: Conference programme
+description: What the printed programme of the conference is made of.
+license: MIT
+default_prefix: conference
+default_range: string
+prefixes:
+  linkml: https://w3id.org/linkml/
+  conference: https://example.org/conference-programme/
+imports:
+  - linkml:types
+
+slots:
+  record_id:
+    description: The identifier the programme database issues.
+    identifier: true
+  title:
+    description: What the programme prints for it.
+    required: true
+  updated_at:
+    description: When the row last changed.
+    range: datetime
+
+enums:
+  status_enum:
+    permissible_values:
+      draft:
+      scheduled:
+      cancelled:
+  audience_level_enum:
+    description: How much the audience is assumed to know already.
+    permissible_values:
+      introductory:
+        description: No previous knowledge assumed.
+      intermediate:
+        description: Some previous knowledge assumed.
+      advanced:
+        description: For people who work with this every day.
+
+classes:
+  trackable:
+    mixin: true
+    description: Anything whose revisions are counted.
+    attributes:
+      revision:
+        range: integer
+        minimum_value: 1
+
+  programme_item:
+    description: >
+      An item on the programme: a talk, a break, a keynote.
+      Everything the printed programme shows is one of these,
+      whether or not anybody speaks at it.
+    slots:
+      - record_id
+      - title
+      - updated_at
+    attributes:
+      starts_at:
+        range: time
+      item_status:
+        range: status_enum
+    unique_keys:
+      title_and_start:
+        unique_key_slots:
+          - title
+          - starts_at
+
+  talk:
+    is_a: programme_item
+    mixins:
+      - trackable
+    description: A talk somebody gives.
+    slot_usage:
+      title:
+        description: The title as the speaker wrote it.
+        pattern: "^[A-Z].*$"
+    attributes:
+      speaker:
+        description: Who gives it.
+        range: person
+        required: true
+      room_code:
+        pattern: "^[A-Z]-[0-9]{3}$"
+      state:
+        description: Where the talk is in the programme.
+        range: status_enum
+      audience_level:
+        range: audience_level_enum
+      recording_url:
+        range: uri
+        comments:
+          - The recordings live in the media library, not here.
+
+  person:
+    description: Somebody who appears in the programme.
+    see_also:
+      - https://example.org/conference-programme/people
+    slots:
+      - record_id
+    attributes:
+      full_name:
+        required: true
+      email_address:
+        pattern: "^\\S+@\\S+$"
+      talks_given:
+        range: talk
+        multivalued: true

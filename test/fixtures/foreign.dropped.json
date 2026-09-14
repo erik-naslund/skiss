@@ -1,0 +1,160 @@
+[
+  {
+    "kind": "renamed",
+    "element": "Trackable",
+    "detail": "from `trackable`"
+  },
+  {
+    "kind": "mixin",
+    "element": "Trackable"
+  },
+  {
+    "kind": "minimum_value",
+    "element": "Trackable.revision"
+  },
+  {
+    "kind": "renamed",
+    "element": "ProgrammeItem",
+    "detail": "from `programme_item`"
+  },
+  {
+    "kind": "unique_keys",
+    "element": "ProgrammeItem"
+  },
+  {
+    "kind": "renamed",
+    "element": "ProgrammeItem.startsAt",
+    "detail": "from `starts_at`"
+  },
+  {
+    "kind": "narrowed",
+    "element": "ProgrammeItem.startsAt",
+    "detail": "`time` is not a Skiss type; it falls back to string"
+  },
+  {
+    "kind": "renamed",
+    "element": "ProgrammeItem.itemStatus",
+    "detail": "from `item_status`"
+  },
+  {
+    "kind": "renamed",
+    "element": "ProgrammeItem.recordId",
+    "detail": "from `record_id`"
+  },
+  {
+    "kind": "required",
+    "element": "ProgrammeItem.title"
+  },
+  {
+    "kind": "renamed",
+    "element": "ProgrammeItem.updatedAt",
+    "detail": "from `updated_at`"
+  },
+  {
+    "kind": "renamed",
+    "element": "Talk",
+    "detail": "from `talk`"
+  },
+  {
+    "kind": "is_a",
+    "element": "Talk"
+  },
+  {
+    "kind": "mixins",
+    "element": "Talk"
+  },
+  {
+    "kind": "slot_usage",
+    "element": "Talk",
+    "detail": "`title` is inherited and not in the sketch"
+  },
+  {
+    "kind": "renamed",
+    "element": "Talk.speaker",
+    "detail": "`Person` from `person`"
+  },
+  {
+    "kind": "required",
+    "element": "Talk.speaker"
+  },
+  {
+    "kind": "renamed",
+    "element": "Talk.roomCode",
+    "detail": "from `room_code`"
+  },
+  {
+    "kind": "pattern",
+    "element": "Talk.roomCode"
+  },
+  {
+    "kind": "renamed",
+    "element": "Talk.audienceLevel",
+    "detail": "from `audience_level`"
+  },
+  {
+    "kind": "renamed",
+    "element": "Talk.recordingUrl",
+    "detail": "from `recording_url`"
+  },
+  {
+    "kind": "comments",
+    "element": "Talk.recordingUrl"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person",
+    "detail": "from `person`"
+  },
+  {
+    "kind": "see_also",
+    "element": "Person"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person.fullName",
+    "detail": "from `full_name`"
+  },
+  {
+    "kind": "required",
+    "element": "Person.fullName"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person.emailAddress",
+    "detail": "from `email_address`"
+  },
+  {
+    "kind": "pattern",
+    "element": "Person.emailAddress"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person.talksGiven",
+    "detail": "from `talks_given`"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person.talksGiven",
+    "detail": "`Talk` from `talk`"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person.recordId",
+    "detail": "from `record_id`"
+  },
+  {
+    "kind": "inlined",
+    "element": "status_enum",
+    "detail": "inlined at 2 attributes"
+  },
+  {
+    "kind": "enum_detail",
+    "element": "audience_level_enum",
+    "detail": "`introductory`, `intermediate`, `advanced` carry bodies of their own; the enum carries `description`"
+  },
+  {
+    "kind": "schema",
+    "element": "conference_programme",
+    "detail": "`description`"
+  }
+]
