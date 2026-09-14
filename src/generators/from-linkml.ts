@@ -114,6 +114,17 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     }
     fieldNames.set(key, names);
   }
+  // SPEC §8, Names: a reference is converted with the name it points at, and
+  // every conversion is reported — including a reference out of the schema,
+  // which has no declaration here to carry the report. One converted name is
+  // reported once per element it appears on.
+  const referenced = new Set<string>();
+  const reference = (element: string, from: string, to: string): void => {
+    if (from === to || referenced.has(`${element}\u0000${to}`)) return;
+    referenced.add(`${element}\u0000${to}`);
+    report('renamed', element, `\`${to}\` from \`${from}\``);
+  };
+
   const classNameOf = (key: string): string => classNames.get(key) ?? toClassName(key);
   const fieldNameOf = (classKey: string, slot: string): string =>
     fieldNames.get(classKey)?.get(slot) ?? toFieldName(slot);
@@ -123,10 +134,14 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
   const enumValues = new Map<string, string[]>();
   const unwritable = new Map<string, string>();
   for (const key of Object.keys(enumDefs)) {
-    const values = asRecord(get(asRecord(get(enumDefs, key)) ?? {}, 'permissible_values')) ?? {};
-    const keys = Object.keys(values);
+    const rawValues = get(asRecord(get(enumDefs, key)) ?? {}, 'permissible_values');
+    const values = asRecord(rawValues);
+    const keys = Object.keys(values ?? {});
     const bad = keys.find((value) => !SYSTEM_OR_VALUE.test(value));
-    if (keys.length < 2) {
+    if (values === undefined && present(rawValues)) {
+      // Say what was found rather than a count of values that were not read.
+      unwritable.set(key, `${shown(rawValues)} is not a map of permissible values`);
+    } else if (keys.length < 2) {
       // SPEC §3.4: a single value without a pipe is an unknown type, not an enum.
       const count = `${keys.length} permissible value${keys.length === 1 ? '' : 's'}`;
       unwritable.set(key, `${count} cannot be an inline enum (§3.4)`);
@@ -175,15 +190,13 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
 
     const mappings = stringList(get(def, 'close_mappings'));
     const first = mappings[0];
-    if (first !== undefined) {
-      // SPEC §5.1 writes `<prefix>:Other`; the prefix is the schema's own or a
-      // system's, and neither survives into a sketch.
-      const target = first.slice(first.lastIndexOf(':') + 1);
-      if (target !== '') {
-        node.similarTo = at0(
-          Object.hasOwn(classDefs, target) ? classNameOf(target) : toClassName(target),
-        );
-      }
+    // SPEC §5.1 writes `<prefix>:Other`, but a foreign schema writes a full
+    // IRI just as often; neither the prefix nor the IRI survives into a sketch.
+    const target = first === undefined ? '' : localName(first);
+    if (target !== '') {
+      const similar = Object.hasOwn(classDefs, target) ? classNameOf(target) : toClassName(target);
+      node.similarTo = at0(similar);
+      reference(name, target, similar);
     }
 
     for (const other of Object.keys(def)) {
@@ -194,10 +207,19 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
           }
         }
         if (other === 'close_mappings') {
-          if (first === undefined) report('close_mappings', name, 'no mapping this can read');
+          if (target === '') report('close_mappings', name, 'no mapping this can read');
           else if (mappings.length > 1) {
             report('close_mappings', name, `${mappings.length - 1} beyond the first`);
           }
+        }
+        // A block the fields are read out of, written as something they
+        // cannot be read out of, loses every field in it.
+        const block = get(def, other);
+        if (other === 'attributes' && present(block) && asRecord(block) === undefined) {
+          report('attributes', name, `${shown(block)} is not a map`);
+        }
+        if (other === 'slots' && present(block) && !Array.isArray(block)) {
+          report('slots', name, `${shown(block)} is not a list`);
         }
         continue;
       }
@@ -210,7 +232,13 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
           continue;
         }
         for (const slot of Object.keys(usage)) {
-          report('slot_usage', `${name}.${fieldNameOf(key, slot)}`);
+          // A slot the sketch does not carry is one `is_a` brought in, and
+          // `is_a` is dropped: the class is where a reader can find it.
+          if (fieldNames.get(key)?.has(slot) === true) {
+            report('slot_usage', `${name}.${fieldNameOf(key, slot)}`);
+          } else {
+            report('slot_usage', name, `\`${slot}\` is inherited and not in the sketch`);
+          }
         }
         continue;
       }
@@ -219,11 +247,14 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
 
     for (const slot of slotKeysOf(def)) {
       const attributes = asRecord(get(def, 'attributes')) ?? {};
-      const slotDef =
-        asRecord(get(attributes, slot)) ??
-        (Object.hasOwn(attributes, slot) ? {} : asRecord(get(slotDefs, slot))) ??
-        {};
-      node.fields.push(buildField(key, name, slot, slotDef));
+      const rawSlot = Object.hasOwn(attributes, slot) ? get(attributes, slot) : get(slotDefs, slot);
+      const slotDef = asRecord(rawSlot);
+      if (slotDef === undefined && present(rawSlot)) {
+        // The same rule as a class whose body is not a class definition.
+        report('slot', `${name}.${fieldNameOf(key, slot)}`, 'is not a slot definition');
+        continue;
+      }
+      node.fields.push(buildField(key, name, slot, slotDef ?? {}));
     }
 
     classes.push(node);
@@ -235,7 +266,7 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     const uses = enumUses.filter((use) => use.enumName === key);
     const why = unwritable.get(key);
     if (why !== undefined) report('enum', key, `${why}; those attributes keep no type`);
-    else if (uses.length === 0) report('enum', key, 'no attribute has it as its range');
+    else if (uses.length === 0) report('unused_enum', key, 'no attribute has it as its range');
     else if (uses.length > 1 && sharingLost(uses, enumUses)) {
       report('inlined', key, `inlined at ${uses.length} attributes`);
     }
@@ -261,8 +292,10 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     if (!listedSomewhere(slot)) report('slot', slot, 'no class lists it');
   }
 
-  const extras = Object.keys(root).filter((key) => !QUIET_SCHEMA_KEYS.has(key));
-  if (extras.length > 0) report('schema', schemaName, list(extras));
+  // One report per key, so the one-line report counts them (`2 schema keys`).
+  for (const key of Object.keys(root)) {
+    if (!QUIET_SCHEMA_KEYS.has(key)) report('schema', schemaName, `\`${key}\``);
+  }
 
   const source = toSkiss({ classes, diagnostics: [] });
   return { document: parse(source), source, dropped };
@@ -279,9 +312,17 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     const element = `${className}.${name}`;
     if (name !== slot) report('renamed', element, `from \`${slot}\``);
 
+    const identifier = get(def, 'identifier');
+    if (present(identifier) && typeof identifier !== 'boolean') {
+      // SPEC §8, The report: a key the table carries, with a value the reader
+      // cannot use, is reported rather than guessed at. `yes` is a boolean in
+      // YAML 1.1 and a string in the YAML 1.2 the CLI parses with.
+      report('identifier', element, `${shown(identifier)} is not a boolean`);
+    }
+
     const field: FieldNode = {
       name: at0(name),
-      identifier: get(def, 'identifier') === true,
+      identifier: identifier === true,
       line: 0,
     };
     const description = oneLine(stringOf(get(def, 'description')));
@@ -301,10 +342,11 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
       const target = joins.slice(0, dot);
       const targetField = joins.slice(dot + 1);
       if (dot > 0 && targetField !== '') {
-        field.joinsTo = {
-          className: at0(classNameOf(target)),
-          fieldName: at0(fieldNameOf(target, targetField)),
-        };
+        const targetClass = classNameOf(target);
+        const targetName = fieldNameOf(target, targetField);
+        field.joinsTo = { className: at0(targetClass), fieldName: at0(targetName) };
+        reference(element, target, targetClass);
+        reference(element, targetField, targetName);
       } else report('annotation', element, '`joins_to` is not `Class.field`');
     } else if (joins !== undefined) report('annotation', element, '`joins_to` is not text');
 
@@ -330,12 +372,23 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     field: string,
     def: Record<string, unknown>,
   ): TypeRef | undefined {
-    const many = get(def, 'multivalued') === true;
+    const rawMany = get(def, 'multivalued');
+    if (present(rawMany) && typeof rawMany !== 'boolean') {
+      report('multivalued', element, `${shown(rawMany)} is not a boolean`);
+    }
+    const many = rawMany === true;
+
+    const rawRange = get(def, 'range');
+    if (present(rawRange) && typeof rawRange !== 'string') {
+      report('range', element, `${shown(rawRange)} is not a string`);
+    } else if (rawRange === '') report('range', element, 'the range is empty');
     // No `range` means `default_range`, which SPEC §5.2 writes as `string`.
-    const range = stringOf(get(def, 'range')) ?? defaultRange;
+    const range = stringOf(rawRange) ?? defaultRange;
 
     if (Object.hasOwn(classDefs, range)) {
-      return { kind: 'class', name: at0(classNameOf(range)), many };
+      const target = classNameOf(range);
+      reference(element, range, target);
+      return { kind: 'class', name: at0(target), many };
     }
     if (Object.hasOwn(enumDefs, range)) {
       const values = enumValues.get(range);
@@ -352,7 +405,11 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
       if (primitive === 'string') return many ? stringType(true) : undefined;
       return { kind: 'primitive', name: primitive, written: at0(primitive), many };
     }
-    if (/^[A-Z]/.test(range)) return { kind: 'class', name: at0(toClassName(range)), many };
+    if (/^[A-Z]/.test(range)) {
+      const target = toClassName(range);
+      reference(element, range, target);
+      return { kind: 'class', name: at0(target), many };
+    }
 
     const word = range.toLowerCase();
     if (!UNKNOWN_TYPE.test(word)) {
@@ -394,10 +451,13 @@ function sharingLost(
 const COUNTED: Record<string, [string, string]> = {
   renamed: ['name', 'names'],
   inlined: ['enum', 'enums'],
-  enum: ['enum', 'enums'],
+  enum: ['unwritable enum', 'unwritable enums'],
+  unused_enum: ['unused enum', 'unused enums'],
   class: ['class', 'classes'],
   slot: ['slot', 'slots'],
   schema: ['schema key', 'schema keys'],
+  // `mixin: true` marks the class; `mixins: [M]` points at another one.
+  mixin: ['mixin class', 'mixin classes'],
   mixins: ['mixin', 'mixins'],
   pattern: ['pattern', 'patterns'],
   unit: ['unit', 'units'],
@@ -500,6 +560,29 @@ const get = (record: Record<string, unknown>, key: string): unknown =>
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   return value as Record<string, unknown>;
+}
+
+/** A key written with no value at all is not a key written with a bad one. */
+const present = (value: unknown): boolean => value !== undefined && value !== null;
+
+/**
+ * A value from somebody else's YAML, short enough to name in a report. A
+ * scalar is quoted as it was written; a block is named by its shape.
+ */
+function shown(value: unknown): string {
+  if (Array.isArray(value)) return 'a list';
+  if (typeof value === 'object' && value !== null) return 'a map';
+  return `\`${String(value)}\``;
+}
+
+/**
+ * The name at the end of a CURIE or an IRI: `catalog:Book` and
+ * `https://schema.org/Book` are both `Book`. Empty when there is no name in it.
+ */
+function localName(mapping: string): string {
+  let cut = -1;
+  for (const mark of [':', '/', '#']) cut = Math.max(cut, mapping.lastIndexOf(mark));
+  return mapping.slice(cut + 1);
 }
 
 const stringOf = (value: unknown): string | undefined =>

@@ -66,10 +66,10 @@ describe('foreign.linkml.yaml (AC3)', () => {
 
   test('formatDropped reports the schema in one line', () => {
     expect(formatDropped(projection().dropped)).toBe(
-      'Dropped: mixin on 1 class, minimum_value on 1 slot, unique_keys on 1 class, ' +
+      'Dropped: 1 mixin class, minimum_value on 1 slot, unique_keys on 1 class, ' +
         'narrowed on 1 slot, required on 3 slots, is_a on 1 class, 1 mixin, ' +
-        'slot_usage on 1 slot, 2 patterns, comments on 1 slot, see_also on 1 class, ' +
-        'enum_detail on 1 enum, 1 schema key. Renamed: 15 names. Inlined: 1 enum.',
+        'slot_usage on 1 class, 2 patterns, comments on 1 slot, see_also on 1 class, ' +
+        'enum_detail on 1 enum, 1 schema key. Renamed: 17 names. Inlined: 1 enum.',
     );
   });
 

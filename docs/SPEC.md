@@ -370,21 +370,26 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 | `range` naming an enum of the schema | an inline enum, its `permissible_values` keys in order |
 | `integer`; `float`, `double`, `decimal`; `boolean`; `date`; `datetime`; `uri`, `uriorcurie` | `int`, `float`, `bool`, `date`, `datetime`, `uri` |
 | `string`, or no `range` where `default_range` is `string` | no type |
+| no `range`, where `default_range` is not `string` | whatever the rows above give that type |
 | any other LinkML type (`time`, `curie`, `ncname`, …) | the word as written, lowercase, which reads as an unknown type (§3.2) and falls back to `string` |
 | `multivalued: true` | `[]` |
 | `description` | `#`, its newlines replaced by spaces |
 | `annotations: {system: S}` | `@S` |
 | `annotations: {note: text}` | `? text` |
 | `annotations: {joins_to: Class.field}` | `= Class.field` |
-| `close_mappings: [prefix:Class]` | `~ Class`, from the first entry, its prefix stripped |
+| `close_mappings: [prefix:Class]`, or a full IRI | `~ Class`, from the first entry: the name after its last `:`, `/` or `#` |
 
-**Names.** Skiss cannot read a class name that is not `UpperCamelCase` or a field name that is not `lowerCamelCase`, so `page_count` and `Page-Count` are converted rather than kept, and every conversion is reported. A reference is converted with the name it points at. Two names that converge take a number: `PageCount`, `PageCount2`.
+**Names.** Skiss cannot read a class name that is not `UpperCamelCase` or a field name that is not `lowerCamelCase`, so `page_count` and `Page-Count` are converted rather than kept, and every conversion is reported. A reference is converted with the name it points at, and is reported where it appears, since a reference out of the schema has no declaration here to carry the report. Two names that converge take a number: `PageCount`, `PageCount2`. A name with nothing in it to convert becomes `Class` or `field`, and one that would start with a digit takes a leading `X` or `x`: §4 has no other way to start a name.
+
+**Multivalued.** `multivalued: true` is `[]`, and `[]` has to attach to a type. Where a row above writes no type — `string`, an enum Skiss cannot write, a range it cannot write — a multivalued slot is written `string[]` rather than untyped.
+
+**Descriptions.** A `description` is written as it stands, its newlines replaced by spaces. One whose text contains a standalone `?` reads as a doubt when the sketch is parsed again (§3.9), so the sentence comes back split across `#` and `?`: the text survives, the marker that carries it does not.
 
 **Enums.** Skiss has no named enums, so an enum is inlined at every attribute whose range it is and its name is not carried. An enum used by exactly one attribute is inlined and nothing is reported. An enum used by several is inlined in each of them, and is reported when the inlining loses the sharing: when §5.1 would not rebuild one enum from the result, because the attributes do not all have one name, or because another attribute of that name carries different values. A permissible value with a body of its own — a `description`, a `meaning`, anything else — is inlined by its key and its body is reported, as is any key on the enum other than `permissible_values`. An enum Skiss cannot write, one with fewer than two values (§3.4) or with a value that is not a Skiss value (§4), is not inlined at all: the attribute keeps no type, and the enum is reported.
 
 ### The report
 
-Everything the table does not carry is reported, never dropped silently: `is_a`, `mixins`, `slot_usage`, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported; any other key at schema level is reported once.
+Everything the table does not carry is reported, never dropped silently: `is_a`, `mixins`, `slot_usage`, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A key the table does carry, written with a value it cannot be read from — an `identifier` or a `multivalued` that is not a boolean, a `range` that is not a name, an `attributes` block that is not a map, a `slots` block that is not a list, an attribute whose body is not a slot definition — is reported under that key too, with what was found there. It is never guessed at: which YAML dialect wrote `yes` is the reader's question, not the sketch's. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. `slot_usage` naming a slot the sketch does not carry — one `is_a` brought in, and `is_a` is dropped — is reported on the class instead, naming the slot. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported; every other key at schema level is reported, one report each.
 
 The reports are counted, grouped by kind, and written as one line in schema order:
 

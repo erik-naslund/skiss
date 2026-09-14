@@ -162,12 +162,15 @@ Every mapping is the inverse of a §5.1 row. Everything LinkML says that §5.1 h
 | `kind` | What it reports |
 |---|---|
 | the LinkML key (`is_a`, `mixins`, `pattern`, `required`, `slot_usage`, …) | that key was on the element and is not carried |
+| a key the mapping does carry (`identifier`, `multivalued`, `range`, `attributes`, `slots`) | the key was there with a value the reader cannot use; `detail` says what was found, and nothing is coerced |
 | `renamed` | a name that is not `UpperCamelCase` or `lowerCamelCase` was converted; `detail` says from what |
 | `narrowed` | a `range` no Skiss primitive covers; the word survives as an unknown type and falls back to `string` |
 | `inlined` | an enum used by several attributes, where inlining it loses the sharing |
 | `enum_detail` | a permissible value with a body of its own, or a key on the enum other than `permissible_values` |
 | `annotation` | an annotation tag §5.1 gives no meaning, or one whose value Skiss cannot write |
-| `class`, `slot`, `enum` | an element that reaches the sketch nowhere at all |
+| `class`, `slot` | a class or an attribute whose body is not a definition, or a global slot no class lists |
+| `enum` | an enum Skiss cannot write, so the attributes that had it as their range keep no type |
+| `unused_enum` | an enum no attribute has as its range, so it reaches the sketch nowhere |
 | `schema` | a key at schema level that is not §5.2 boilerplate, or a schema this cannot read at all |
 
 `element` names the element as the sketch names it, `Class` or `Class.field`; an enum is named as LinkML named it, since the sketch does not keep enum names. `formatDropped` counts the reports by kind into the §8 one-line report.

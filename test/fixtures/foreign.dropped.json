@@ -65,7 +65,13 @@
   },
   {
     "kind": "slot_usage",
-    "element": "Talk.title"
+    "element": "Talk",
+    "detail": "`title` is inherited and not in the sketch"
+  },
+  {
+    "kind": "renamed",
+    "element": "Talk.speaker",
+    "detail": "`Person` from `person`"
   },
   {
     "kind": "required",
@@ -125,6 +131,11 @@
     "kind": "renamed",
     "element": "Person.talksGiven",
     "detail": "from `talks_given`"
+  },
+  {
+    "kind": "renamed",
+    "element": "Person.talksGiven",
+    "detail": "`Talk` from `talk`"
   },
   {
     "kind": "renamed",
