@@ -1,6 +1,6 @@
 # ADR-0001 — The name is Skiss
 
-- **Status:** Accepted
+- **Status:** Accepted; the npm package line is superseded by ADR-0009
 - **Date:** 2026-09-12
 - **Deciders:** Erik
 

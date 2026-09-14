@@ -12,3 +12,4 @@ One file per decision, [MADR](https://adr.github.io/madr/) format: context, deci
 | [0006](0006-generators-return-data.md) | Generators return data; serialisation is a separate step | Accepted |
 | [0007](0007-testing-strategy.md) | Golden fixtures, plus LinkML validation with the real toolchain in CI | Accepted |
 | [0008](0008-explicit-identifier.md) | `*` is the only identifier marker, one per class | Accepted |
+| [0009](0009-scoped-npm-package.md) | The npm package is `@eriknaslund/skiss`; the command stays `skiss` | Accepted |

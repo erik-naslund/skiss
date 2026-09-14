@@ -10,7 +10,7 @@ The library has to run wherever an editor runs: a browser, an Electron renderer,
 
 ## Decision
 
-- This repository is one npm package, `skiss`, with two entry points.
+- This repository is one npm package (`@eriknaslund/skiss`, see ADR 0009) with two entry points.
 - `skiss` is the library. It uses no Node built-ins, no filesystem, no `process`, and its only runtime dependency is a YAML serialiser.
 - `skiss/cli` is the command. It is Node-only and is the only place that touches files.
 - The library never depends on any editor or host application. Enforced by not listing one as a dependency.
