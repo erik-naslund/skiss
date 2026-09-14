@@ -22,6 +22,7 @@ skiss/
     generators/
       mermaid.ts      # Document -> Mermaid classDiagram string
       linkml.ts       # Document -> LinkML schema object (0.2.0)
+      skiss.ts        # Document -> canonical Skiss text (0.3.0)
     serialize.ts      # schema object -> YAML / JSON (0.2.0)
     cli.ts            # the `skiss` command (Node only)
   test/
@@ -47,12 +48,15 @@ Document (AST) + warnings
    │
    ├─▶ toLinkML()    → LinkML schema as a plain object
    │      └─▶ serialize()  → YAML or JSON text
-   └─▶ toMermaid()   → Mermaid classDiagram text
+   ├─▶ toMermaid()   → Mermaid classDiagram text
+   └─▶ toSkiss()     → canonical Skiss text
 ```
 
 `parse` and `resolve` are separate on purpose. Parsing is line-local and always succeeds for the lines it can read. The one piece of state `parse` carries between lines is which class is current, so a field can attach to it and a field before any class can be reported; no line changes how another line is *read*. Resolving is where anything that needs two lines happens, and it only ever adds warnings ([ADR 0004](adr/0004-line-based-parsing-and-diagnostics.md)).
 
 Generators return data where the target is structured. `toLinkML` returns a plain object; YAML is a separate step ([ADR 0006](adr/0006-generators-return-data.md)).
+
+`toSkiss` is the printer: it writes a Document back out as the notation itself, in one canonical layout, which makes it the second half of a projection from LinkML and, later, a formatter.
 
 ## Public API
 
@@ -67,6 +71,9 @@ export const VERSION: string;
 // 0.2.0
 export function toLinkML(doc: Document, opts: { schemaName: string }): LinkMLSchema;
 export function serialize(schema: LinkMLSchema, format: 'yaml' | 'json'): string;
+
+// 0.3.0
+export function toSkiss(doc: Document): string;
 ```
 
 `parse` never throws and never returns null. It returns whatever it could read plus diagnostics.

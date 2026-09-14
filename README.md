@@ -64,7 +64,7 @@ Or without installing: `npx @eriknaslund/skiss diagram model.skiss`.
 
 `skiss compile model.skiss` writes a LinkML schema instead, as YAML on standard output. `--json` writes the same schema as JSON, `--name` sets the schema name (it defaults to the file name without its extension, and to `sketch` when reading standard input), and `-o`, `-`, `--strict` and the diagnostics work exactly as they do for `diagram`.
 
-`npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid` and `VERSION`, browser-safe.
+`npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toSkiss` and `VERSION`, browser-safe.
 
 Editors that render Skiss live are separate projects built on this package. This repository is the language, the library and the command line.
 
