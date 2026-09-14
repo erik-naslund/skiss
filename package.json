@@ -26,7 +26,7 @@
     }
   },
   "bin": {
-    "skiss": "./dist/cli.js"
+    "skiss": "dist/cli.js"
   },
   "scripts": {
     "build": "tsup",
