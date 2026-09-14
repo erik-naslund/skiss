@@ -23,6 +23,14 @@ by a real doubt, a field with only a doubt, the `integer` and `boolean`
 aliases, and a column-0 comment. Its Mermaid output is derived with `notes`
 off, so no description or doubt appears in it.
 
+**spec-example** (`spec-example.skiss`, `spec-example.linkml.yaml`). The
+worked example from SPEC §5.3, both halves copied byte for byte. It covers
+the mappings the spec chose to demonstrate: `@System` annotations on a class
+and on a field, an inline enum, `~`, `=`, `*`, `: int` and `: Planet`. It
+lands before the generator does, so the spec's own example is checked by
+LinkML itself rather than only read. When the generator arrives it must
+produce this YAML from this Skiss, exactly.
+
 **broken** (`broken.skiss`, `broken.mmd`, `broken.diagnostics.json`). The
 mid-typing states. Every diagnostic code in the ARCHITECTURE.md table
 appears at least once, on a line preceded by a column-0 comment naming the
@@ -33,3 +41,8 @@ line, without messages. `broken.mmd` is the diagram of the partial
 document: lines that produce an error are absent, lines that produce a
 warning are present, and classes that are referenced but never declared
 appear as `<<undeclared>>` placeholders.
+
+Every `*.linkml.yaml` fixture here is validated in CI by the real LinkML
+toolchain — `linkml-lint` and `gen-python`, from the pinned version that
+`scripts/linkml-env.sh` installs — never by a hand-written approximation
+(ADR 0007).

@@ -34,7 +34,8 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test"
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm verify:linkml",
+    "verify:linkml": "if command -v python3 >/dev/null 2>&1; then scripts/linkml-env.sh && scripts/validate-linkml.sh; else echo 'verify: LinkML validation skipped, python3 not found'; fi"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.13",

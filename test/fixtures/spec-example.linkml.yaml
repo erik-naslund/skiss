@@ -1,0 +1,62 @@
+id: https://example.org/galaxy_catalogue
+name: galaxy_catalogue
+default_prefix: galaxy_catalogue
+default_range: string
+prefixes:
+  linkml: https://w3id.org/linkml/
+  galaxy_catalogue: https://example.org/galaxy_catalogue/
+  catalog: https://example.org/system/catalog/
+  community: https://example.org/system/community/
+imports:
+  - linkml:types
+
+classes:
+
+  Character:
+    description: a person or droid in the archive
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      homeworld:
+        range: Planet
+      popularityRank:
+        range: integer
+        annotations:
+          system: Community
+          note: do we actually want this here
+
+  Planet:
+    annotations:
+      system: Catalog
+    attributes:
+      id:
+        identifier: true
+      name: {}
+      climate:
+        range: ClimateEnum
+
+  CharacterPage:
+    description: the community wiki's version
+    annotations:
+      system: Community
+    close_mappings:
+      - catalog:Character
+    attributes:
+      slug:
+        identifier: true
+      characterId:
+        annotations:
+          joins_to: Character.id
+      editCount:
+        range: integer
+
+enums:
+  ClimateEnum:
+    permissible_values:
+      arid:
+      temperate:
+      frozen:
+      unknown:
