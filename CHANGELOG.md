@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2026-09-14
 
-First release. Skiss to Mermaid.
+First release. Skiss to Mermaid. Published as `@eriknaslund/skiss`; the command is `skiss`.
 
 ### Added
 
@@ -24,6 +24,8 @@ First release. Skiss to Mermaid.
 - `toMermaid`: a Mermaid class diagram from any document, undeclared classes
   drawn as placeholders, doubts as notes with `notes: true`.
 - `compile` and `formatDiagnostic` for editors and tools.
+- `toLinkML` and `serialize` in the library, ahead of the `skiss compile`
+  command that arrives in 0.2.0.
 - The `skiss` command: `skiss diagram <file> [-o path] [--notes] [--strict]`,
   `-` for standard input, diagnostics on standard error.
 
