@@ -82,15 +82,15 @@ export function resolve(doc: Document): ResolvedDocument {
       }
 
       // SPEC §3.8: at most one identifier per class, the first wins. The
-      // AST does not record where the `*` sits, so the range is the field
-      // name it marks (issue #4, working default D5).
+      // range is the `*` the warning is about (issue #16); a field carrying
+      // `identifier` without a recorded position falls back to its name.
       if (field.identifier) {
         if (identifier === undefined) identifier = field;
         else {
           warn(
             'W_MULTIPLE_IDENTIFIERS',
             `\`*\` on \`${field.name.text}\` is ignored: class \`${cls.name.text}\` already has the identifier \`${identifier.name.text}\` on line ${identifier.line}`,
-            field.name,
+            field.identifierAt ?? field.name,
           );
           field.identifier = false;
         }
@@ -171,6 +171,7 @@ const copyJoin = (j: JoinRef): JoinRef => ({
 
 function copyField(f: FieldNode): FieldNode {
   const out: FieldNode = { ...f, name: copyName(f.name) };
+  if (f.identifierAt !== undefined) out.identifierAt = copyName(f.identifierAt);
   if (f.type !== undefined) out.type = copyType(f.type);
   if (f.joinsTo !== undefined) out.joinsTo = copyJoin(f.joinsTo);
   return out;

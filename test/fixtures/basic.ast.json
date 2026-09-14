@@ -24,7 +24,13 @@
             "end": 4
           },
           "line": 2,
-          "identifier": true
+          "identifier": true,
+          "identifierAt": {
+            "text": "*",
+            "line": 2,
+            "col": 4,
+            "end": 5
+          }
         },
         {
           "name": {
@@ -128,7 +134,13 @@
             "end": 4
           },
           "line": 9,
-          "identifier": true
+          "identifier": true,
+          "identifierAt": {
+            "text": "*",
+            "line": 9,
+            "col": 4,
+            "end": 5
+          }
         },
         {
           "name": {
@@ -205,7 +217,13 @@
             "end": 4
           },
           "line": 14,
-          "identifier": true
+          "identifier": true,
+          "identifierAt": {
+            "text": "*",
+            "line": 14,
+            "col": 4,
+            "end": 5
+          }
         },
         {
           "name": {
@@ -283,7 +301,13 @@
             "end": 4
           },
           "line": 20,
-          "identifier": true
+          "identifier": true,
+          "identifierAt": {
+            "text": "*",
+            "line": 20,
+            "col": 4,
+            "end": 5
+          }
         },
         {
           "name": {
@@ -369,7 +393,13 @@
             "end": 6
           },
           "line": 26,
-          "identifier": true
+          "identifier": true,
+          "identifierAt": {
+            "text": "*",
+            "line": 26,
+            "col": 6,
+            "end": 7
+          }
         },
         {
           "name": {

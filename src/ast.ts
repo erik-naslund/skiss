@@ -39,6 +39,13 @@ export interface JoinRef {
 export interface FieldNode {
   name: Name;
   identifier: boolean;
+  /**
+   * Where the `*` is written, set by `parse` whenever one is present.
+   * Whitespace before `*` is allowed, so the position cannot be derived from
+   * the field name, and `resolve` points W_MULTIPLE_IDENTIFIERS at it. It
+   * stays as written when `resolve` clears `identifier` on a second `*`.
+   */
+  identifierAt?: Name;
   type?: TypeRef;
   system?: Name;
   joinsTo?: JoinRef;
