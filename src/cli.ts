@@ -26,15 +26,27 @@ Exit codes:
   0  a diagram was produced
   1  --strict and the input has diagnostics (the diagram is still written)
   2  usage error, missing file or unreadable input
+  70 internal error, a bug in skiss
 `;
 
-/** Issue #6, AC4 and AC5. */
+/** Issue #6, AC4 and AC5. 70 is `EX_SOFTWARE` from `sysexits.h`. */
 const EXIT_OK = 0;
 const EXIT_STRICT = 1;
 const EXIT_USAGE = 2;
+const EXIT_INTERNAL = 70;
 
 /** Thrown for anything that ends the run with exit code 2. */
 class UsageError extends Error {}
+
+/**
+ * Our own `UsageError`, or a `parseArgs` rejection (unknown option, `-o`
+ * with no path), whose `code` is one of the `ERR_PARSE_ARGS_*` family.
+ */
+function isUsageError(error: unknown): boolean {
+  if (error instanceof UsageError) return true;
+  if (typeof error !== 'object' || error === null || !('code' in error)) return false;
+  return typeof error.code === 'string' && error.code.startsWith('ERR_PARSE_ARGS');
+}
 
 async function main(argv: string[]): Promise<number> {
   if (argv.length === 0) {
@@ -124,10 +136,17 @@ main(process.argv.slice(2)).then(
     process.exitCode = code;
   },
   (error: unknown) => {
-    // A `parseArgs` rejection (unknown option, `-o` with no path) is a usage
-    // error like our own; both carry a one-line message.
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`skiss: ${message}\nTry 'skiss --help' for more information.\n`);
-    process.exitCode = EXIT_USAGE;
+    if (isUsageError(error)) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`skiss: ${message}\nTry 'skiss --help' for more information.\n`);
+      process.exitCode = EXIT_USAGE;
+      return;
+    }
+    // Anything else is a bug (`compile` never throws by contract), so the
+    // stack is the useful output and the `--help` hint would mislead.
+    const detail =
+      error instanceof Error && error.stack !== undefined ? error.stack : String(error);
+    process.stderr.write(`skiss: internal error: ${detail}\n`);
+    process.exitCode = EXIT_INTERNAL;
   },
 );

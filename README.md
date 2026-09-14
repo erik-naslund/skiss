@@ -62,7 +62,7 @@ Or without installing: `npx skiss diagram model.skiss`.
 
 `skiss diagram` writes a Mermaid class diagram to standard output; `-o diagram.mmd` writes it to a file, `--notes` includes the `?` doubts as notes, and `-` reads standard input. Anything the file gets wrong is reported on standard error, one line each, and the diagram is still drawn from the lines that parse. `--strict` makes that a non-zero exit. `skiss --help` lists the rest.
 
-`npm install skiss` also gives you the library: `compile`, `parse`, `resolve` and `toMermaid`, browser-safe.
+`npm install skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toMermaid` and `VERSION`, browser-safe.
 
 Editors that render Skiss live are separate projects built on this package. This repository is the language, the library and the command line.
 

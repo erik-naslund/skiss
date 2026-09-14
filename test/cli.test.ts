@@ -85,7 +85,9 @@ describe.each(['basic', 'systems', 'broken'])('skiss diagram test/fixtures/%s.sk
     const r = skiss(['diagram', '-'], fixture(`${name}.skiss`));
     expect(r.stdout).toBe(fixture(`${name}.mmd`));
     expect(r.status).toBe(0);
-    for (const line of r.stderr.split('\n').filter((l) => l !== '')) {
+    const lines = r.stderr === '' ? [] : r.stderr.replace(/\n$/, '').split('\n');
+    expect(lines).toHaveLength(expected.length);
+    for (const line of lines) {
       expect(line).toMatch(/^<stdin>:\d+:\d+: (error|warning) [EW]_[A-Z_]+ .+$/);
     }
   });
@@ -133,8 +135,29 @@ describe('help, version and usage errors (AC5)', () => {
     expect(skiss(['diagram']).status).toBe(2);
   });
 
-  test('an unknown option exits 2', () => {
-    expect(skiss(['diagram', '--colour', 'test/fixtures/basic.skiss']).status).toBe(2);
+  test('an unknown option exits 2 with the `--help` hint', () => {
+    const r = skiss(['diagram', '--colour', 'test/fixtures/basic.skiss']);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("Try 'skiss --help'");
+  });
+});
+
+describe('internal errors', () => {
+  // `compile` never throws, so the only way to reach the handler's other
+  // branch through the real binary is to make a step after it fail: a
+  // preloaded module makes `process.stdout.write` throw.
+  test('an unexpected exception exits 70 with its stack on stderr and no `--help` hint', () => {
+    const preload = join(root, 'test', 'throw-on-stdout.mjs');
+    const r = spawnSync(
+      process.execPath,
+      ['--import', preload, cli, 'diagram', 'test/fixtures/basic.skiss'],
+      { cwd: root, encoding: 'utf8' },
+    );
+    if (r.error) throw r.error;
+    expect(r.status).toBe(70);
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toMatch(/^skiss: internal error: Error: stdout is broken\n\s+at /);
+    expect(r.stderr).not.toContain("Try 'skiss --help'");
   });
 });
 
