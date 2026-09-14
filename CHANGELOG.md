@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-14
+
+### Added
+
+- `W_UNDECLARED_CLASS` says which primitive was meant when the name is one
+  written with a capital: "class `Int` is not declared. Did you mean `int`?"
+
+### Changed
+
+- `W_MULTIPLE_IDENTIFIERS` points at the second `*` rather than the field
+  name; `FieldNode` records the marker's position as `identifierAt`.
+
+### Fixed
+
+- `x: constructor` and the other `Object.prototype` keys are unknown types
+  with the `string` fallback, not primitives.
+
 ## [0.2.0] - 2026-09-14
 
 Skiss to LinkML from the command line. The `0.1.0` tarball on npm was built
