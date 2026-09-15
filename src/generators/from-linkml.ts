@@ -10,15 +10,15 @@
 // and one report saying why.
 
 import type { ClassNode, Document, FieldNode, Name, Primitive, TypeRef } from '../ast.ts';
-import { CLASS_NAME, FIELD_NAME, parse, SYSTEM_OR_VALUE } from '../parse.ts';
-import { toSkiss } from './skiss.ts';
+import { CLASS_NAME, ENUM_VALUE, FIELD_NAME, parse, SYSTEM_NAME } from '../parse.ts';
+import { rewordsDescription, toSkiss } from './skiss.ts';
 
 /**
  * One thing the projection could not carry. `kind` is the LinkML key, or one
  * of the projection's own kinds: `renamed`, `narrowed`, `inlined`,
- * `enum_detail`, `annotation`, `schema`, `unreadable`. `element` names what
- * carried it as the sketch names it — `Class`, `Class.field` — or, for an
- * enum, its LinkML name, which the sketch does not keep.
+ * `enum_detail`, `annotation`, `reworded`, `schema`, `unreadable`. `element`
+ * names what carried it as the sketch names it — `Class`, `Class.field` — or,
+ * for an enum, its LinkML name, which the sketch does not keep.
  */
 export interface Dropped {
   kind: string;
@@ -74,6 +74,9 @@ const QUIET_SCHEMA_KEYS = new Set([
   'slots',
   'enums',
 ]);
+
+/** SPEC §8, Descriptions: what the rewrite did, said once. */
+const REWORDED = 'a standalone `?` is attached to the word before it';
 
 /** A lowercase word `parse` reads as an unknown type (SPEC §3.2). */
 const UNKNOWN_TYPE = /^[a-z][a-z0-9_-]*$/;
@@ -137,7 +140,7 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     const rawValues = get(asRecord(get(enumDefs, key)) ?? {}, 'permissible_values');
     const values = asRecord(rawValues);
     const keys = Object.keys(values ?? {});
-    const bad = keys.find((value) => !SYSTEM_OR_VALUE.test(value));
+    const bad = keys.find((value) => !ENUM_VALUE.test(value));
     if (values === undefined && present(rawValues)) {
       // Say what was found rather than a count of values that were not read.
       unwritable.set(key, `${shown(rawValues)} is not a map of permissible values`);
@@ -183,11 +186,14 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
 
     const node: ClassNode = { name: at0(name), fields: [], line: 0 };
     const description = oneLine(stringOf(get(def, 'description')));
-    if (description !== undefined) node.description = description;
+    if (description !== undefined) {
+      node.description = description;
+      if (rewordsDescription(description)) report('reworded', name, REWORDED);
+    }
 
     const system = annotations.get('system');
     if (typeof system === 'string') {
-      if (SYSTEM_OR_VALUE.test(system)) node.system = at0(system);
+      if (SYSTEM_NAME.test(system)) node.system = at0(system);
       else report('annotation', name, '`system` is not a system name');
     } else if (system !== undefined) report('annotation', name, notText('system', system));
 
@@ -335,7 +341,10 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
       line: 0,
     };
     const description = oneLine(stringOf(get(def, 'description')));
-    if (description !== undefined) field.description = description;
+    if (description !== undefined) {
+      field.description = description;
+      if (rewordsDescription(description)) report('reworded', element, REWORDED);
+    }
 
     const type = typeFor(element, name, def);
     if (type !== undefined) field.type = type;
@@ -343,7 +352,7 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     const annotations = annotationsOf(def);
     const system = annotations.get('system');
     if (typeof system === 'string') {
-      if (SYSTEM_OR_VALUE.test(system)) field.system = at0(system);
+      if (SYSTEM_NAME.test(system)) field.system = at0(system);
       else report('annotation', element, '`system` is not a system name');
     } else if (system !== undefined) report('annotation', element, notText('system', system));
 
@@ -478,6 +487,7 @@ const COUNTED: Record<string, [string, string]> = {
   narrowed: ['narrowed range', 'narrowed ranges'],
   enum_detail: ['enum detail', 'enum details'],
   annotation: ['unreadable annotation', 'unreadable annotations'],
+  reworded: ['description reworded', 'descriptions reworded'],
   // `mixin: true` marks the class; `mixins: [M]` points at another one.
   mixin: ['mixin class', 'mixin classes'],
   mixins: ['mixin', 'mixins'],

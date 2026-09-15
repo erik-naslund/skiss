@@ -96,6 +96,58 @@ describe('the document as a whole', () => {
   });
 });
 
+// SPEC 0.2, §8, Descriptions (issue #57, from review finding D7): a standalone
+// `?` in a description would start a doubt when the line is parsed again, so
+// the printer attaches it to the word before it.
+describe('a `?` inside a description (SPEC §8)', () => {
+  const at = (text: string) => ({ text, line: 0, col: 0, end: text.length });
+
+  const printed = (node: { description?: string; note?: string }): string =>
+    toSkiss({ classes: [{ name: at('Ship'), fields: [], line: 0, ...node }], diagnostics: [] });
+
+  const reparsed = (node: { description?: string; note?: string }) =>
+    parse(printed(node)).classes[0];
+
+  test('the `?` is attached to the word before it and the whitespace is dropped', () => {
+    expect(printed({ description: 'born here ? confirm later' })).toContain(
+      '# born here? confirm later',
+    );
+    expect(reparsed({ description: 'born here ? confirm later' })?.description).toBe(
+      'born here? confirm later',
+    );
+  });
+
+  test('a doubt on the same element keeps its own text', () => {
+    const node = { description: 'born here ? confirm later', note: '7' };
+    expect(reparsed(node)?.description).toBe('born here? confirm later');
+    expect(reparsed(node)?.note).toBe('7');
+  });
+
+  test('a `?` at the end of the description is attached too', () => {
+    expect(reparsed({ description: 'seats or crew ?', note: 'ask' })?.description).toBe(
+      'seats or crew?',
+    );
+  });
+
+  test('a description that is only `?`, or starts with one, attaches to the marker', () => {
+    expect(printed({ description: '?' })).toContain('#?');
+    expect(reparsed({ description: '?' })?.description).toBe('?');
+    expect(reparsed({ description: '? confirm', note: '7' })?.description).toBe('? confirm');
+    expect(reparsed({ description: '? confirm', note: '7' })?.note).toBe('7');
+  });
+
+  test('a `?` already attached to a word is left as it is', () => {
+    expect(printed({ description: 'where were they born? here' })).toContain(
+      '# where were they born? here',
+    );
+  });
+
+  test('a source file round-trips: `parse` never puts a standalone `?` in a description', () => {
+    const source = 'Ship                                    # born here ? confirm later\n';
+    expect(toSkiss(parse(source))).toBe(source);
+  });
+});
+
 describe('the round trip is stable on arbitrary input (AC3)', () => {
   // The same alphabet as never-throws.test.ts, weighted towards the
   // characters Skiss cares about. A seeded generator keeps it reproducible.

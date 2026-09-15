@@ -110,3 +110,8 @@ classes:
       talks_given:
         range: talk
         multivalued: true
+      born_on:
+        description: The date on the badge ? the desk copies it off the passport
+        range: date
+        annotations:
+          note: ask before printing this in the programme

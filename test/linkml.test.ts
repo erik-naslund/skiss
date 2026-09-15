@@ -278,3 +278,31 @@ describe('issue #23, AC2: serialize', () => {
     expect(yaml.split('\n').every((line) => line === line.replace(/[ \t]+$/, ''))).toBe(true);
   });
 });
+
+// SPEC 0.2, §3.4 (issue #57): a permissible value of digits has to reach the
+// file as a string, or PyYAML hands LinkML an integer key.
+describe('SPEC §3.4, a numeric enum value', () => {
+  const out = schema('Task\n  priority: 1|2|3\n  code: 007|008\n');
+
+  test('the values are the keys of the enum, in order', () => {
+    expect(out.enums?.PriorityEnum?.permissible_values).toEqual({
+      '1': null,
+      '2': null,
+      '3': null,
+    });
+  });
+
+  test('every numeric key is quoted in the YAML', () => {
+    const yaml = serialize(out, 'yaml');
+    expect(yaml).toContain('      "1":\n');
+    expect(yaml).toContain('      "007":\n');
+  });
+
+  test('the keys parse back as the strings they were written as (YAML 1.1)', () => {
+    const back = parseYaml(serialize(out, 'yaml'), { version: '1.1' }) as {
+      enums: Record<string, { permissible_values: Record<string, unknown> }>;
+    };
+    expect(Object.keys(back.enums.PriorityEnum?.permissible_values ?? {})).toEqual(['1', '2', '3']);
+    expect(Object.keys(back.enums.CodeEnum?.permissible_values ?? {})).toEqual(['007', '008']);
+  });
+});

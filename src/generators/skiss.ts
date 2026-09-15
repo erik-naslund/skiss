@@ -77,6 +77,29 @@ function typeText(type: TypeRef | undefined): string | undefined {
 }
 
 /**
+ * The `#` marker and a description as this printer writes them, SPEC §8.
+ *
+ * A standalone `?` in the text — whitespace before it, whitespace or the end
+ * of the line after it — would start a doubt when the line is parsed again
+ * (SPEC §3.9), splitting the sentence and taking any doubt already on the
+ * element with it. Attaching it to the word before it, by dropping the
+ * whitespace between them, is ordinary text by the same rule. A `?` with no
+ * word before it has only the marker to attach to, so the marker keeps no
+ * space: `#? confirm`.
+ */
+export function writeDescription(text: string): string {
+  const attached = text.replace(/[ \t]+\?(?=[ \t]|$)/g, '?');
+  return /^\?([ \t]|$)/.test(attached) ? `#${attached}` : `# ${attached}`;
+}
+
+/**
+ * True when `writeDescription` had to reword the text. SPEC §8 reports every
+ * description it changes, and the projection reads the rule from here rather
+ * than keeping a second copy of it.
+ */
+export const rewordsDescription = (text: string): boolean => writeDescription(text) !== `# ${text}`;
+
+/**
  * SPEC §3.9: the description comes first and the doubt ends it. The trailer
  * starts at `TRAILER_COLUMN`, or two spaces after the line when the line is
  * already that long, so there is always whitespace before the marker for
@@ -88,7 +111,7 @@ function withTrailer(head: string, node: { description?: string; note?: string }
   // marker: `parse` never produces one, and a trailing `# ` would not survive
   // a round trip.
   if (node.description !== undefined && node.description !== '')
-    parts.push(`# ${node.description}`);
+    parts.push(writeDescription(node.description));
   if (node.note !== undefined && node.note !== '') parts.push(`? ${node.note}`);
   if (parts.length === 0) return head;
   const gap = head.length < TRAILER_COLUMN - 1 ? ' '.repeat(TRAILER_COLUMN - head.length) : '  ';
