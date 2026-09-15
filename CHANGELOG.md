@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-15
+
+Specification 0.2, and the fixes from the deep review at 0.3.0 (#52).
+Numeric enum values, a round trip that keeps a description's `?` out of the
+doubt, and a CLI that behaves in a pipe.
+
 ### Changed
 
 - The specification is at **0.2**. An inline enum value may start with a digit
@@ -126,7 +132,8 @@ First release. Skiss to Mermaid. Published as `@eriknaslund/skiss`; the command 
 - The `skiss` command: `skiss diagram <file> [-o path] [--notes] [--strict]`,
   `-` for standard input, diagnostics on standard error.
 
-[Unreleased]: https://github.com/erik-naslund/skiss/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/erik-naslund/skiss/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/erik-naslund/skiss/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/erik-naslund/skiss/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/erik-naslund/skiss/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/erik-naslund/skiss/compare/v0.1.0...v0.2.0

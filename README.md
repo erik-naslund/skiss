@@ -84,7 +84,7 @@ Editors that render Skiss live are separate projects built on this package. This
 
 ## Status
 
-0.3.0, published on npm as [`@eriknaslund/skiss`](https://www.npmjs.com/package/@eriknaslund/skiss). The language parses, resolves and diagnoses; `skiss diagram` draws it, `skiss compile` writes LinkML that the real LinkML toolchain validates in CI, and `skiss import` reads a LinkML schema back into a sketch. The library exports the same in both directions and is browser-safe.
+0.4.0, published on npm as [`@eriknaslund/skiss`](https://www.npmjs.com/package/@eriknaslund/skiss). The language parses, resolves and diagnoses; `skiss diagram` draws it, `skiss compile` writes LinkML that the real LinkML toolchain validates in CI, and `skiss import` reads a LinkML schema back into a sketch. The library exports the same in both directions and is browser-safe.
 
 The [specification](docs/SPEC.md) is at 0.2 and moves when the language does, which is not with every release. Not built: inheritance, and editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
 
