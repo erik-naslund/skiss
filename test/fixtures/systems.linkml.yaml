@@ -99,6 +99,9 @@ classes:
         description: editorial summary
       hits:
         range: integer
+      rating:
+        description: stars, as readers left them
+        range: RatingEnum
       format:
         range: FormatEnum
 
@@ -122,3 +125,10 @@ enums:
     permissible_values:
       open:
       returned:
+  RatingEnum:
+    permissible_values:
+      "1":
+      "2":
+      "3":
+      "4":
+      "5":

@@ -1,6 +1,6 @@
 # Skiss
 
-**Specification, version 0.1**
+**Specification, version 0.2**
 
 *Applies to skiss 0.3.0.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
 
@@ -97,9 +97,12 @@ tags: string[]
 
 ```
 climate: arid|temperate|frozen|unknown
+priority: 1|2|3
 ```
 
 Two or more values separated by `|`. A single value without a pipe is an unknown type (§3.2).
+
+A value may start with a digit and may be digits only, so `1|2|3` is three values and not a number. It compiles to the permissible values `"1"`, `"2"` and `"3"`, quoted, because LinkML reads the file as YAML.
 
 The values are a set: a value written twice in one enum is a warning (`W_DUPLICATE_ENUM_VALUE`, listed with the other codes in [ARCHITECTURE.md](ARCHITECTURE.md)), the line is kept as written, and the enum carries the value once.
 
@@ -193,7 +196,7 @@ enum         = value "|" value { "|" value } ;
 ClassName    = uppercase-letter { letter | digit } ;
 field-name   = lowercase-letter { letter | digit } ;
 System       = letter { letter | digit | "-" | "_" } ;
-value        = letter { letter | digit | "-" | "_" } ;
+value        = ( letter | digit ) { letter | digit | "-" | "_" } ;
 WS           = one or more spaces or tabs ;
 ```
 
@@ -389,9 +392,9 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 
 **Multivalued.** `multivalued: true` is `[]`, and `[]` has to attach to a type. Where a row above writes no type — `string`, an enum Skiss cannot write, a range it cannot write — a multivalued slot is written `string[]` rather than untyped.
 
-**Descriptions.** A `description` is written as it stands, its newlines replaced by spaces. One whose text contains a standalone `?` reads as a doubt when the sketch is parsed again (§3.9), so the sentence comes back split across `#` and `?`: the text survives, the marker that carries it does not.
+**Descriptions.** A `description` is written as it stands, its newlines replaced by spaces, except for a standalone `?` in its text. Written as it stands, such a `?` would read as the start of a doubt when the sketch is parsed again (§3.9): the sentence would come back split across `#` and `?`, and a doubt already on the element would be appended to the half that was split off. So the `?` is attached to the word before it — the whitespace between them is dropped — which §3.9 reads as ordinary text. A `?` with no word before it attaches to the `#` that starts the description, as `#? confirm`. Nothing else in the text changes, and every description reworded this way is reported, counted as `1 description reworded`. A doubt is not touched: a `?` anywhere in it is ordinary text, because a doubt runs to the end of the line.
 
-**Enums.** Skiss has no named enums, so an enum is inlined at every attribute whose range it is and its name is not carried. An enum used by exactly one attribute is inlined and nothing is reported. An enum used by several is inlined in each of them, and is reported when the inlining loses the sharing: when §5.1 would not rebuild one enum from the result, because the attributes do not all have one name, or because another attribute of that name carries different values. A permissible value with a body of its own — a `description`, a `meaning`, anything else — is inlined by its key and its body is reported, as is any key on the enum other than `permissible_values`. An enum Skiss cannot write, one with fewer than two values (§3.4) or with a value that is not a Skiss value (§4), is not inlined at all: the attribute keeps no type, and the enum is reported.
+**Enums.** Skiss has no named enums, so an enum is inlined at every attribute whose range it is and its name is not carried. An enum used by exactly one attribute is inlined and nothing is reported. An enum used by several is inlined in each of them, and is reported when the inlining loses the sharing: when §5.1 would not rebuild one enum from the result, because the attributes do not all have one name, or because another attribute of that name carries different values. A permissible value with a body of its own — a `description`, a `meaning`, anything else — is inlined by its key and its body is reported, as is any key on the enum other than `permissible_values`. An enum Skiss cannot write, one with fewer than two values (§3.4) or with a value that is not a Skiss value (§4), is not inlined at all: the attribute keeps no type, and the enum is reported. A value of digits is a Skiss value, so an enum of `1`, `2` and `3` is inlined like any other.
 
 ### The report
 
@@ -430,3 +433,4 @@ An editor may present a LinkML schema as Skiss, accept edits, and merge them bac
 1. **Does `=` ever carry a transformation?** Often the real join rule is "their `id` with a prefix stripped". A comment for now; the first thing likely to force a 0.2.
 2. **Inheritance.** Reserved as `<`, not defined. The most likely first thing to be missed.
 3. **What breaks first against a real model?**
+4. **Is a single value after the colon that is not a word a type at all?** `priority: 1` is neither an enum (§3.4 needs a pipe) nor an unknown type (§3.2 reads a lowercase word), so it is unparsable, while `priority: 1|2` is an enum. Settled the other way it would need a rule for what a one-value type means.

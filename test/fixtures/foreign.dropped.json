@@ -139,6 +139,16 @@
   },
   {
     "kind": "renamed",
+    "element": "Person.bornOn",
+    "detail": "from `born_on`"
+  },
+  {
+    "kind": "reworded",
+    "element": "Person.bornOn",
+    "detail": "a standalone `?` is attached to the word before it"
+  },
+  {
+    "kind": "renamed",
     "element": "Person.recordId",
     "detail": "from `record_id`"
   },

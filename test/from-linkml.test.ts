@@ -287,6 +287,81 @@ describe('SPEC §8, close_mappings', () => {
   });
 });
 
+// SPEC 0.2, §8, Descriptions (issue #57, from review finding D7).
+describe('SPEC §8, Descriptions', () => {
+  const parts = {
+    classes: {
+      Person: {
+        description: 'born here ? confirm later',
+        annotations: { note: '7' },
+        attributes: { name: {} },
+      },
+    },
+  };
+
+  test('a standalone `?` in a description is attached to the word before it', () => {
+    expect(sketch(parts)).toBe(
+      'Person                                  # born here? confirm later ? 7\n  name\n',
+    );
+  });
+
+  test('the doubt keeps the note it was written with, and the description the rest', () => {
+    const cls = project(parts).document.classes[0];
+    expect(cls?.description).toBe('born here? confirm later');
+    expect(cls?.note).toBe('7');
+  });
+
+  test('the document that comes back agrees with the classes that were built', () => {
+    const { document, source } = project(parts);
+    expect(document.diagnostics).toEqual([]);
+    expect(source).toContain('# born here? confirm later ? 7');
+  });
+
+  test('the rewrite is reported once, on the element that carried it', () => {
+    expect(dropped(parts)).toEqual([
+      {
+        kind: 'reworded',
+        element: 'Person',
+        detail: 'a standalone `?` is attached to the word before it',
+      },
+    ]);
+    expect(formatDropped(dropped(parts))).toBe('Dropped: 1 description reworded.');
+  });
+
+  test('a slot description is reworded and reported the same way', () => {
+    const slot = {
+      classes: {
+        Person: { attributes: { born: { description: 'here ? or abroad', range: 'date' } } },
+      },
+    };
+    expect(sketch(slot)).toBe(
+      'Person\n  born: date                            # here? or abroad\n',
+    );
+    expect(dropped(slot)).toEqual([
+      {
+        kind: 'reworded',
+        element: 'Person.born',
+        detail: 'a standalone `?` is attached to the word before it',
+      },
+    ]);
+  });
+
+  test('a description with no standalone `?` is not reported', () => {
+    const plain = { classes: { Person: { description: 'born here? confirm later' } } };
+    expect(sketch(plain)).toBe(
+      'Person                                  # born here? confirm later\n',
+    );
+    expect(dropped(plain)).toEqual([]);
+  });
+
+  test('a `?` in a doubt is left alone: a doubt runs to the end of the line', () => {
+    const doubt = { classes: { Person: { annotations: { note: 'seats ? or crew' } } } };
+    expect(sketch(doubt)).toBe('Person                                  ? seats ? or crew\n');
+    expect(project(doubt).document.classes[0]?.note).toBe('seats ? or crew');
+    expect(dropped(doubt)).toEqual([]);
+  });
+});
+
 describe('SPEC §8, Enums', () => {
   const status = { permissible_values: { open: {}, closed: {} } };
 
@@ -334,6 +409,30 @@ describe('SPEC §8, Enums', () => {
       },
     };
     expect(dropped(parts).map((d) => d.element)).toEqual(['status']);
+  });
+
+  test('an enum whose values are numeric is inlined like any other (SPEC 0.2, §3.4)', () => {
+    const parts = {
+      enums: { priority_enum: { permissible_values: { 1: {}, 2: {}, 3: {} } } },
+      classes: { Task: { attributes: { priority: { range: 'priority_enum' } } } },
+    };
+    expect(sketch(parts)).toBe('Task\n  priority: 1|2|3\n');
+    expect(dropped(parts)).toEqual([]);
+  });
+
+  test('a value Skiss still cannot write leaves the attribute untyped', () => {
+    const parts = {
+      enums: { bad_enum: { permissible_values: { '-1': {}, 2: {} } } },
+      classes: { Task: { attributes: { priority: { range: 'bad_enum' } } } },
+    };
+    expect(sketch(parts)).toBe('Task\n  priority\n');
+    expect(dropped(parts)).toEqual([
+      {
+        kind: 'enum',
+        element: 'bad_enum',
+        detail: '`-1` is not a value Skiss can write (§4); those attributes keep no type',
+      },
+    ]);
   });
 
   test('an enum with fewer than two values is not an inline enum (SPEC §3.4)', () => {
@@ -663,6 +762,7 @@ describe('SPEC §8, the report as one line', () => {
       'inlined',
       'enum_detail',
       'annotation',
+      'reworded',
       'class',
       'slot',
       'enum',

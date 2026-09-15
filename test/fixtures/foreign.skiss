@@ -19,4 +19,5 @@ Person                                  # Somebody who appears in the programme.
   fullName
   emailAddress
   talksGiven: Talk[]
+  bornOn: date                          # The date on the badge? the desk copies it off the passport ? ask before printing this in the programme
   recordId*                             # The identifier the programme database issues.

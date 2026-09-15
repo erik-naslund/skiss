@@ -41,3 +41,12 @@ describe.each(FIXTURES)('%s', (name) => {
     expect(result).toMatchObject({ diagramType: 'classDiagram' });
   });
 });
+
+// SPEC 0.2, §3.4 (issue #57): a numeric enum reaches the diagram as the
+// attribute type `1|2|3`, which Mermaid has to accept like any other.
+test('a numeric inline enum parses with Mermaid', async () => {
+  const text = toMermaid(resolve(parse('Task\n  priority: 1|2|3\n  sizes: 1x|2x[]\n')));
+  expect(text).toContain('+1|2|3 priority');
+  const result = await mermaid.parse(text);
+  expect(result).toMatchObject({ diagramType: 'classDiagram' });
+});

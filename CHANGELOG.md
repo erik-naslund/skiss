@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The specification is at **0.2**. An inline enum value may start with a digit
+  and may be digits only, so `priority: 1|2|3` is an enum of three values where
+  it used to be `E_UNPARSABLE` and lose the whole field. The permissible values
+  reach LinkML quoted (SPEC §3.4 and §4).
+- A description the LinkML projection writes no longer comes back split. Where
+  its text holds a standalone `?`, `toSkiss` attaches the `?` to the word before
+  it, which is ordinary text, instead of leaving it to read as the start of a
+  doubt and take any doubt already on the element with it. Every description
+  reworded that way is reported: `1 description reworded` (SPEC §8).
+
 ### Fixed
 
 - `skiss diagram model.skiss | head` no longer dies with a Node stack trace and

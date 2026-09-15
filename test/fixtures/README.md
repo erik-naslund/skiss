@@ -20,7 +20,8 @@ exercise the corners `basic` does not: a field that names its own
 `@System`, `~` and `=` together on one class, the same field name
 (`status`) with different enum values on two classes, the same field name
 (`format`) with identical enum values on two classes, `[]` on an inline
-enum, a class with no identifier, a description and a doubt on class lines,
+enum, an enum of numeric values (`rating`), which reaches LinkML as quoted
+permissible values, a class with no identifier, a description and a doubt on class lines,
 a description whose text contains a `?` followed by a real doubt, a field
 with only a doubt, the `integer` and `boolean` aliases, and a column-0
 comment. Its Mermaid output is derived with `notes` off, so no description
@@ -58,8 +59,10 @@ says does not map: global slots two classes share, `is_a`, a mixin class and
 the `mixins` that use it, `slot_usage`, patterns, `required`, `unique_keys`,
 `minimum_value`, `comments`, `see_also`, a `time` range, an enum shared by two
 differently named attributes, an enum whose permissible values carry
-descriptions, snake_case names throughout, and a folded multi-line
-description. `foreign.skiss` is the sketch `fromLinkML` projects it to and
+descriptions, snake_case names throughout, a folded multi-line
+description, and a description whose text holds a standalone `?` on a slot
+that also carries a note, which SPEC §8 rewords rather than let it come back
+split. `foreign.skiss` is the sketch `fromLinkML` projects it to and
 `foreign.dropped.json` is what it reported dropping, in schema order. It is
 also under the LinkML gate, so the input is a schema the real toolchain
 accepts rather than one invented to be convenient.

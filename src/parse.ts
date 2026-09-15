@@ -32,7 +32,10 @@ const trimWs = (s: string): string => s.replace(/^[ \t]+/, '').replace(/[ \t]+$/
 // place is the point of the parser owning them.
 export const CLASS_NAME = /^[A-Z][A-Za-z0-9]*$/;
 export const FIELD_NAME = /^[a-z][A-Za-z0-9]*$/;
-export const SYSTEM_OR_VALUE = /^[A-Za-z][A-Za-z0-9_-]*$/;
+export const SYSTEM_NAME = /^[A-Za-z][A-Za-z0-9_-]*$/;
+// SPEC §4: a value, unlike a system name, may start with a digit, so
+// `priority: 1|2|3` is an enum of three values (SPEC 0.2, issue #57).
+export const ENUM_VALUE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 /**
  * SPEC §3.2: the primitives and the aliases that name them. The one table;
@@ -444,7 +447,7 @@ function parseSystem(c: Cursor, at: Token): Result<Name> {
       system ?? afterSpan(at),
     );
   }
-  if (!SYSTEM_OR_VALUE.test(system.text)) {
+  if (!SYSTEM_NAME.test(system.text)) {
     return fail(
       'E_UNPARSABLE',
       `A system name is letters, digits, \`-\` and \`_\`, starting with a letter: \`${system.text}\``,
@@ -508,10 +511,10 @@ function parseType(c: Cursor, colon: Token): Result<TypeRef> {
 
   if (words.length > 1) {
     for (const w of words) {
-      if (!SYSTEM_OR_VALUE.test(w.text)) {
+      if (!ENUM_VALUE.test(w.text)) {
         return fail(
           'E_UNPARSABLE',
-          `An enum value is letters, digits, \`-\` and \`_\`, starting with a letter: \`${w.text}\``,
+          `An enum value is letters, digits, \`-\` and \`_\`, and does not start with \`-\` or \`_\`: \`${w.text}\``,
           c.line,
           w,
         );

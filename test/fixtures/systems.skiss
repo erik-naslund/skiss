@@ -34,4 +34,5 @@ BookListing @Website ~ Book             # what the public site shows
   bookIsbn = Book.isbn
   blurb                                 # editorial summary
   hits: int
+  rating: 1|2|3|4|5                     # stars, as readers left them
   format: hardback|paperback|audio
