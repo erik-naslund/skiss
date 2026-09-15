@@ -192,6 +192,7 @@ Every mapping is the inverse of a §5.1 row. Everything LinkML says that §5.1 h
 | `inlined` | an enum used by several attributes, where inlining it loses the sharing |
 | `enum_detail` | a permissible value with a body of its own, or a key on the enum other than `permissible_values` |
 | `annotation` | an annotation tag §5.1 gives no meaning, or one whose value is not text §5.3 could have written; nothing is stringified into a system or a doubt |
+| `reworded` | a `description` holding a standalone `?`, which `toSkiss` writes attached to the word before it so it does not read as a doubt (SPEC §8) |
 | `class`, `slot` | a class or an attribute whose body is not a definition, or a global slot no class lists |
 | `enum` | an enum Skiss cannot write, so the attributes that had it as their range keep no type |
 | `unused_enum` | an enum no attribute has as its range, so it reaches the sketch nowhere |
