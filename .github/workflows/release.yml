@@ -67,6 +67,6 @@ jobs:
         run: scripts/check-package.sh
 
       - name: Publish
-        # `--provenance=false` because provenance requires a public source
-        # repository; drop the flag once this repository is public.
-        run: npm publish --access public --provenance=false
+        # Provenance: npm records which workflow run of this public repository
+        # built the tarball, and the package page shows it.
+        run: npm publish --access public --provenance
