@@ -41,8 +41,14 @@ const WARNING_CODES = new Set([
   'W_UNDECLARED_FIELD',
   'W_DUPLICATE_CLASS',
   'W_DUPLICATE_FIELD',
+  'W_DUPLICATE_ENUM_VALUE',
   'W_MULTIPLE_IDENTIFIERS',
+  'W_REDUNDANT_OVERRIDE',
 ]);
+
+// The one error `resolve` adds: a circle of `<` needs more than one line to
+// see, so `parse` cannot produce it (SPEC §7, §3.10).
+const RESOLVE_CODES = new Set(['E_INHERITANCE_CYCLE']);
 
 describe('parse never throws (SPEC §7, ADR 0004)', () => {
   test('empty, whitespace-only, CRLF, tabs and binary garbage all return a document', () => {
@@ -109,11 +115,17 @@ describe('resolve never throws (SPEC §7, ADR 0004)', () => {
       const snapshot = JSON.parse(JSON.stringify(doc));
       const out = resolve(doc);
       expect(doc).toEqual(snapshot);
-      expect(out.diagnostics.filter((d) => d.severity === 'error')).toEqual(doc.diagnostics);
+      expect(
+        out.diagnostics.filter((d) => d.severity === 'error' && !RESOLVE_CODES.has(d.code)),
+      ).toEqual(doc.diagnostics);
       expect(out.classes.length).toBe(doc.classes.length);
       let previous = 0;
       for (const d of out.diagnostics) {
-        expect(d.severity === 'error' ? CODES.has(d.code) : WARNING_CODES.has(d.code)).toBe(true);
+        expect(
+          d.severity === 'error'
+            ? CODES.has(d.code) || RESOLVE_CODES.has(d.code)
+            : WARNING_CODES.has(d.code),
+        ).toBe(true);
         expect(d.line).toBeGreaterThanOrEqual(previous);
         previous = d.line;
       }
@@ -188,9 +200,12 @@ describe('importLinkML never throws (issue #47, AC1)', () => {
       // Whatever the text was, what it writes is Skiss that parses.
       expect(parse(out.output).diagnostics).toEqual([]);
       for (const d of out.diagnostics) {
-        expect(d.code === 'E_NOT_YAML' || CODES.has(d.code) || WARNING_CODES.has(d.code)).toBe(
-          true,
-        );
+        expect(
+          d.code === 'E_NOT_YAML' ||
+            CODES.has(d.code) ||
+            RESOLVE_CODES.has(d.code) ||
+            WARNING_CODES.has(d.code),
+        ).toBe(true);
       }
       // A text that is not YAML is that one error and nothing else (AC1).
       if (out.diagnostics.some((d) => d.code === 'E_NOT_YAML')) {

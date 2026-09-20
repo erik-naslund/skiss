@@ -50,7 +50,14 @@ const PRIMITIVE_RANGE: Record<string, Primitive> = {
 };
 
 /** The keys of a class §5.1 writes and this reads back. */
-const CLASS_KEYS = new Set(['description', 'annotations', 'close_mappings', 'attributes', 'slots']);
+const CLASS_KEYS = new Set([
+  'description',
+  'is_a',
+  'annotations',
+  'close_mappings',
+  'attributes',
+  'slots',
+]);
 /** The keys of a slot §5.1 writes and this reads back. */
 const SLOT_KEYS = new Set(['description', 'annotations', 'range', 'multivalued', 'identifier']);
 /** The annotation tags §5.1 gives a meaning. `undeclared` marks a stub. */
@@ -112,7 +119,7 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
   for (const key of Object.keys(classDefs)) {
     const names = new Map<string, string>();
     const taken = new Set<string>();
-    for (const slot of slotKeysOf(asRecord(get(classDefs, key)) ?? {})) {
+    for (const slot of fieldKeysOf(key)) {
       names.set(slot, unique(toFieldName(slot), taken));
     }
     fieldNames.set(key, names);
@@ -203,6 +210,17 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
       if (note !== undefined) node.note = note;
     } else if (rawNote !== undefined) report('annotation', name, notText('note', rawNote));
 
+    // SPEC §8: `is_a` is `< Parent`. A parent the schema does not define is an
+    // undeclared class in the sketch, exactly as a reference to one is.
+    const parent = stringOf(get(def, 'is_a'));
+    if (parent !== undefined) {
+      const parentName = Object.hasOwn(classDefs, parent)
+        ? classNameOf(parent)
+        : toClassName(parent);
+      node.parent = at0(parentName);
+      reference(name, parent, parentName);
+    }
+
     const mappings = stringList(get(def, 'close_mappings'));
     const first = mappings[0];
     // SPEC §5.1 writes `<prefix>:Other`, but a foreign schema writes a full
@@ -230,6 +248,9 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
         // A block the fields are read out of, written as something they
         // cannot be read out of, loses every field in it.
         const block = get(def, other);
+        if (other === 'is_a' && present(block) && stringOf(block) === undefined) {
+          report('is_a', name, `${shown(block)} is not a class name`);
+        }
         if (other === 'attributes' && present(block) && asRecord(block) === undefined) {
           report('attributes', name, `${shown(block)} is not a map`);
         }
@@ -246,12 +267,16 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
           report('slot_usage', name);
           continue;
         }
+        const written = slotKeysOf(def);
+        const inherited = inheritedSlots(key);
         for (const slot of Object.keys(usage)) {
-          // A slot the sketch does not carry is one `is_a` brought in, and
-          // `is_a` is dropped: the class is where a reader can find it.
-          if (fieldNames.get(key)?.has(slot) === true) {
+          if (written.includes(slot)) {
+            // The class writes the slot itself, so the sketch has a field for
+            // it already and the usage is a second thing said about it.
             report('slot_usage', `${name}.${fieldNameOf(key, slot)}`);
-          } else {
+          } else if (!inherited.has(slot)) {
+            // No parent this schema defines declares it, so there is nothing
+            // in the sketch for the entry to be about.
             report('slot_usage', name, `\`${slot}\` is inherited and not in the sketch`);
           }
         }
@@ -260,9 +285,16 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
       report(other, name);
     }
 
-    for (const slot of slotKeysOf(def)) {
+    const own = slotKeysOf(def);
+    for (const slot of fieldKeysOf(key)) {
       const attributes = asRecord(get(def, 'attributes')) ?? {};
-      const rawSlot = Object.hasOwn(attributes, slot) ? get(attributes, slot) : get(slotDefs, slot);
+      // SPEC §8: a slot the class writes is read from its own body, and one
+      // it inherits from the `slot_usage` entry that replaces it, alone.
+      const rawSlot = !own.includes(slot)
+        ? get(asRecord(get(def, 'slot_usage')) ?? {}, slot)
+        : Object.hasOwn(attributes, slot)
+          ? get(attributes, slot)
+          : get(slotDefs, slot);
       const slotDef = asRecord(rawSlot);
       if (slotDef === undefined && present(rawSlot)) {
         // The same rule as a class whose body is not a class definition.
@@ -441,6 +473,47 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     }
     report('narrowed', element, `\`${range}\` is not a Skiss type; it falls back to string`);
     return { kind: 'unknown', name: at0(word), many };
+  }
+
+  /** The class `is_a` names, when the schema defines it (SPEC §8). */
+  function parentKeyOf(classKey: string): string | undefined {
+    const def = asRecord(get(classDefs, classKey)) ?? {};
+    const parent = stringOf(get(def, 'is_a'));
+    if (parent === undefined || !Object.hasOwn(classDefs, parent)) return undefined;
+    return parent;
+  }
+
+  /**
+   * The slots a class inherits: every slot its parents write. The `seen` set
+   * is what keeps a schema whose `is_a` chain closes on itself from running
+   * forever; the sketch it projects to reports the circle itself (SPEC §3.10).
+   */
+  function inheritedSlots(classKey: string): Set<string> {
+    const out = new Set<string>();
+    const seen = new Set<string>([classKey]);
+    let key = parentKeyOf(classKey);
+    while (key !== undefined && !seen.has(key)) {
+      seen.add(key);
+      for (const slot of slotKeysOf(asRecord(get(classDefs, key)) ?? {})) out.add(slot);
+      key = parentKeyOf(key);
+    }
+    return out;
+  }
+
+  /**
+   * The slots a class's fields are read from: what it writes, and then the
+   * `slot_usage` entries that replace a slot it inherits (SPEC §3.10).
+   */
+  function fieldKeysOf(classKey: string): string[] {
+    const def = asRecord(get(classDefs, classKey)) ?? {};
+    const keys = slotKeysOf(def);
+    const usage = asRecord(get(def, 'slot_usage'));
+    if (usage === undefined) return keys;
+    const inherited = inheritedSlots(classKey);
+    for (const slot of Object.keys(usage)) {
+      if (inherited.has(slot) && !keys.includes(slot)) keys.push(slot);
+    }
+    return keys;
   }
 
   /** True when a class lists this global slot, so it was flattened into one. */

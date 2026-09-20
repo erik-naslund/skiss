@@ -515,7 +515,8 @@ describe('SPEC §8, the report', () => {
         },
       }),
     ).toEqual([
-      { kind: 'is_a', element: 'Book' },
+      // `is_a` is carried as `<` (SPEC §8); `Item` is not in the schema, so
+      // the sketch has it as an undeclared class and its slots with it.
       { kind: 'mixins', element: 'Book' },
       { kind: 'unique_keys', element: 'Book' },
       { kind: 'slot_usage', element: 'Book.isbn' },
@@ -562,7 +563,7 @@ describe('SPEC §8, the report', () => {
         },
         settings: {},
       }).map((d) => `${d.kind} ${d.element}`),
-    ).toEqual(['is_a Second', 'mixins First', 'enum_detail e', 'schema foreign']);
+    ).toEqual(['mixins First', 'enum_detail e', 'schema foreign']);
   });
 });
 
@@ -715,13 +716,13 @@ describe('SPEC §8, the report as one line', () => {
 
   test('the counts are grouped by kind, in the order the kinds first appear', () => {
     const dropped: Dropped[] = [
-      ...Array.from({ length: 4 }, (_, i) => ({ kind: 'is_a', element: `C${i}` })),
+      ...Array.from({ length: 4 }, (_, i) => ({ kind: 'required', element: `C.g${i}` })),
       ...Array.from({ length: 3 }, (_, i) => ({ kind: 'pattern', element: `C.f${i}` })),
       ...Array.from({ length: 2 }, (_, i) => ({ kind: 'mixins', element: `D${i}` })),
       ...Array.from({ length: 7 }, (_, i) => ({ kind: 'slot_usage', element: `E.f${i}` })),
     ];
     expect(formatDropped(dropped)).toBe(
-      'Dropped: is_a on 4 classes, 3 patterns, 2 mixins, slot_usage on 7 slots.',
+      'Dropped: required on 4 slots, 3 patterns, 2 mixins, slot_usage on 7 slots.',
     );
   });
 

@@ -28,6 +28,7 @@ export function toSkiss(doc: Document): string {
 function classBlock(cls: ClassNode): string {
   const head =
     cls.name.text +
+    (cls.parent === undefined ? '' : ` < ${cls.parent.text}`) +
     (cls.system === undefined ? '' : ` @${cls.system.text}`) +
     (cls.similarTo === undefined ? '' : ` ~ ${cls.similarTo.text}`);
   return [withTrailer(head, cls), ...cls.fields.map(fieldLine)].join('\n');

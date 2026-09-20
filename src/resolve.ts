@@ -2,9 +2,10 @@
 //
 // `parse` reads every line on its own, so anything that needs two lines to
 // know is established here: whether a referenced class or field exists,
-// whether a name is duplicated, whether a class has more than one `*`. It
-// produces warnings only, never removes a node or a diagnostic, never throws,
-// and never touches its input.
+// whether a name is duplicated, whether a class has more than one `*`, what a
+// class inherits. It produces warnings and the one error no single line can
+// see — a circle of `<` (SPEC §7, §3.10) — never removes a node or a
+// diagnostic, never throws, and never touches its input.
 
 import type {
   ClassNode,
@@ -16,6 +17,7 @@ import type {
   Name,
   TypeRef,
 } from './ast.ts';
+import { inheritance, sameField } from './inheritance.ts';
 import { PRIMITIVES } from './parse.ts';
 
 /** What `resolve` returns: a `Document` whose `undeclared` list is always present. */
@@ -35,11 +37,17 @@ export function resolve(doc: Document): ResolvedDocument {
   const classes = out.classes;
 
   const declared = new Set(classes.map((c) => c.name.text));
-  const warnings: Diagnostic[] = [];
+  const found: Diagnostic[] = [];
   const undeclared = new Map<string, Name>();
+  // The parent chains of the copy, so clearing a `<` below cannot change them.
+  const tree = inheritance(classes);
 
   const warn = (code: DiagnosticCode, message: string, at: Name): void => {
-    warnings.push({ severity: 'warning', code, message, line: at.line, col: at.col, end: at.end });
+    found.push({ severity: 'warning', code, message, line: at.line, col: at.col, end: at.end });
+  };
+
+  const error = (code: DiagnosticCode, message: string, at: Name): void => {
+    found.push({ severity: 'error', code, message, line: at.line, col: at.col, end: at.end });
   };
 
   // `: X`, `~ X` or `= X.f` with X not declared (SPEC §3.2). The reference is
@@ -73,11 +81,33 @@ export function resolve(doc: Document): ResolvedDocument {
       );
     }
 
+    // SPEC §3.10. The parent is read before `~` on the line, so its warning
+    // comes first. An undeclared parent is a reference like any other: the
+    // `<` is kept and LinkML gets a stub for the class.
+    const parent = cls.parent;
+    if (parent !== undefined) {
+      reference(parent);
+      const circle = tree.circle(cls);
+      if (circle !== undefined) {
+        const through = circle.slice(1).map((member) => `\`${member.name.text}\``);
+        const path = through.length === 0 ? '' : ` through ${through.join(', ')}`;
+        error(
+          'E_INHERITANCE_CYCLE',
+          `class \`${cls.name.text}\` inherits from itself${path}; this \`<\` is not carried`,
+          parent,
+        );
+        // The circle is cut where it closed, as a second `*` is cleared: the
+        // node is kept, and no generator has to know about circles.
+        cls.parent = undefined;
+      }
+    }
+
     // Working default D3: `~` to the class itself is not a warning in 0.1.0.
     if (cls.similarTo !== undefined) reference(cls.similarTo);
 
     const firstField = new Map<string, FieldNode>();
-    let identifier: FieldNode | undefined;
+    const inheritedIdentifier = tree.inheritedIdentifier(cls);
+    let identifier: FieldNode | undefined = inheritedIdentifier?.field;
     for (const field of cls.fields) {
       const earlierField = firstField.get(field.name.text);
       if (earlierField === undefined) firstField.set(field.name.text, field);
@@ -95,13 +125,30 @@ export function resolve(doc: Document): ResolvedDocument {
       if (field.identifier) {
         if (identifier === undefined) identifier = field;
         else {
+          // SPEC §3.10: an inherited identifier counts, and the warning says
+          // which class it was inherited from.
+          const from =
+            identifier === inheritedIdentifier?.field
+              ? ` inherits the identifier \`${identifier.name.text}\` from class \`${inheritedIdentifier.from.name.text}\`, line`
+              : ` already has the identifier \`${identifier.name.text}\` on line`;
           warn(
             'W_MULTIPLE_IDENTIFIERS',
-            `\`*\` on \`${field.name.text}\` is ignored: class \`${cls.name.text}\` already has the identifier \`${identifier.name.text}\` on line ${identifier.line}`,
+            `\`*\` on \`${field.name.text}\` is ignored: class \`${cls.name.text}\`${from} ${identifier.line}`,
             field.identifierAt ?? field.name,
           );
           field.identifier = false;
         }
+      }
+
+      // SPEC §3.10: a field that replaces an inherited one says nothing the
+      // parent does not when the two mean the same.
+      const replaced = tree.inherited(cls, field.name.text);
+      if (replaced !== undefined && sameField(field, replaced.field)) {
+        warn(
+          'W_REDUNDANT_OVERRIDE',
+          `field \`${field.name.text}\` is identical to the one inherited from class \`${replaced.from.name.text}\` on line ${replaced.field.line}`,
+          field.name,
+        );
       }
 
       if (field.type?.kind === 'unknown') {
@@ -158,8 +205,8 @@ export function resolve(doc: Document): ResolvedDocument {
   // Idempotence (AC1): a warning the document already carries is not added
   // again, so resolving a resolved document changes nothing.
   const present = new Set(out.diagnostics.map(key));
-  for (const w of warnings) {
-    if (!present.has(key(w))) out.diagnostics.push(w);
+  for (const d of found) {
+    if (!present.has(key(d))) out.diagnostics.push(d);
   }
   // Errors are in line order from `parse`; a stable sort slots the warnings
   // in and keeps errors before warnings on the same line.
@@ -205,6 +252,7 @@ function copyField(f: FieldNode): FieldNode {
 
 function copyClass(c: ClassNode): ClassNode {
   const out: ClassNode = { ...c, name: copyName(c.name), fields: c.fields.map(copyField) };
+  if (c.parent !== undefined) out.parent = copyName(c.parent);
   if (c.system !== undefined) out.system = copyName(c.system);
   if (c.similarTo !== undefined) out.similarTo = copyName(c.similarTo);
   return out;
