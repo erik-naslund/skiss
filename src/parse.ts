@@ -23,8 +23,9 @@ import type {
 } from './ast.ts';
 
 // SPEC §4: WS is spaces or tabs. Used for indentation, trailer delimiting and
-// working default D5 (trailing whitespace is ignored).
-const isWs = (c: string | undefined): boolean => c === ' ' || c === '\t';
+// working default D5 (trailing whitespace is ignored). Exported because the
+// tokeniser (`highlight.ts`) delimits a trailer the same way this does.
+export const isWs = (c: string | undefined): boolean => c === ' ' || c === '\t';
 const trimWs = (s: string): string => s.replace(/^[ \t]+/, '').replace(/[ \t]+$/, '');
 
 // SPEC §4: the name productions. Exported because a projection from LinkML
@@ -61,7 +62,7 @@ export const PRIMITIVES: Record<string, Primitive> = {
  * object, so `constructor`, `toString` and the other `Object.prototype` keys
  * would find an inherited property and read as a primitive (issue #42).
  */
-function primitiveFor(word: string): Primitive | undefined {
+export function primitiveFor(word: string): Primitive | undefined {
   return Object.hasOwn(PRIMITIVES, word) ? PRIMITIVES[word] : undefined;
 }
 
@@ -141,7 +142,7 @@ interface Trailer {
 }
 
 /** True when the `?` at `i` stands alone: whitespace before, whitespace or end after. */
-function isDoubtMarker(text: string, i: number): boolean {
+export function isDoubtMarker(text: string, i: number): boolean {
   return text[i] === '?' && isWs(text[i - 1]) && (i + 1 === text.length || isWs(text[i + 1]));
 }
 
@@ -206,6 +207,17 @@ interface Token {
 }
 
 const WORD = /[\p{L}\p{N}_-]+/uy;
+
+/**
+ * SPEC §4: the word starting at `i`, or `undefined` when nothing there is one.
+ * The tokeniser splits a line into the same runs this does, so a shared
+ * function rather than a shared sticky regex, whose `lastIndex` is state.
+ */
+export function wordAt(text: string, i: number): string | undefined {
+  WORD.lastIndex = i;
+  return WORD.exec(text)?.[0];
+}
+
 const OPERATORS: readonly TokenKind[] = ['*', ':', '@', '~', '=', '.', '|', '<', ',', '['];
 
 function tokenize(head: string): Token[] {
@@ -217,11 +229,10 @@ function tokenize(head: string): Token[] {
       i++;
       continue;
     }
-    WORD.lastIndex = i;
-    const word = WORD.exec(head);
-    if (word !== null) {
-      tokens.push({ kind: 'word', text: word[0], col: i, end: i + word[0].length });
-      i += word[0].length;
+    const word = wordAt(head, i);
+    if (word !== undefined) {
+      tokens.push({ kind: 'word', text: word, col: i, end: i + word.length });
+      i += word.length;
       continue;
     }
     if (c === '[' && head[i + 1] === ']') {

@@ -35,6 +35,7 @@ export {
 } from './generators/linkml.ts';
 export { type MermaidOptions, toMermaid } from './generators/mermaid.ts';
 export { toSkiss } from './generators/skiss.ts';
+export { type Token, type TokenKind, tokenizeLine } from './highlight.ts';
 export { type ImportResult, importLinkML } from './import.ts';
 export { parse } from './parse.ts';
 export { type ResolvedDocument, resolve } from './resolve.ts';
