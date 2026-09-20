@@ -20,6 +20,7 @@ skiss/
     inheritance.ts    # the parent chains a `<` builds, walked in one place
     compile.ts        # source -> { output, diagnostics } in one call
     diagnostics.ts    # formatDiagnostic: the file:line:col text form
+    highlight.ts      # tokenizeLine: where the words of one line are, for editors
     generators/
       mermaid.ts      # Document -> Mermaid classDiagram string
       linkml.ts       # Document -> LinkML schema object (0.2.0)
@@ -114,9 +115,14 @@ export function toSkiss(doc: Document): string;
 export function fromLinkML(schema: unknown): { document: Document; source: string; dropped: Dropped[] };
 export function formatDropped(dropped: Dropped[]): string;   // the SPEC §8 one-line report
 export function importLinkML(text: string): { output: string; dropped: Dropped[]; diagnostics: Diagnostic[] };
+
+// 0.6.0
+export function tokenizeLine(line: string): Token[];   // { kind, from, to } per run, for editors
 ```
 
 `parse` never throws and never returns null. It returns whatever it could read plus diagnostics.
+
+`tokenizeLine` is the editors' half of that: one line in, the runs of characters it recognises out, stateless and silent about everything else. It reads the name productions, the primitive table and the trailer rule out of `parse.ts` rather than keeping its own ([ADR 0010](adr/0010-tokeniser-in-the-package.md)).
 
 ## AST
 

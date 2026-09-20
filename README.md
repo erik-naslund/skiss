@@ -69,7 +69,9 @@ Or without installing: `npx @eriknaslund/skiss diagram model.skiss`.
 
 `skiss import schema.linkml.yaml` goes the other way: it reads a LinkML schema, YAML or JSON, and writes Skiss. What the projection could not carry — patterns, `required`, `mixins`, the names it had to convert — is one line on standard error before the diagnostics, because a sketch is a smaller language than LinkML and that line says by how much. `-o`, `-` and the diagnostics work as they do for `compile`; `--strict` exits 1 when the projected sketch has a diagnostic, and also when anything was dropped. An input that is not a schema at all — not YAML, or YAML no schema can be read out of — produces no sketch, says why on standard error, and exits 2, the code every command uses for unreadable input.
 
-`npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toSkiss`, `fromLinkML`, `formatDropped`, `importLinkML` and `VERSION`, browser-safe.
+`npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toSkiss`, `fromLinkML`, `formatDropped`, `importLinkML`, `tokenizeLine` and `VERSION`, browser-safe.
+
+`tokenizeLine` is there for editors: it says where the words of one line are — `{ kind, from, to }` for each run of characters, so a host can colour them. It is line-based and stateless, as the language is: one line in, its tokens out, nothing carried from the line before, and nothing said about a run it does not recognise, so a half-typed line keeps the colours it has earned. It is not a parser and reports nothing; diagnostics stay `parse` and `resolve`'s ([ADR 0010](docs/adr/0010-tokeniser-in-the-package.md)).
 
 Editors that render Skiss live are separate projects built on this package. This repository is the language, the library and the command line.
 

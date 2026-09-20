@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `tokenizeLine` in the library, with `Token` and `TokenKind`: the tokens of
+  one Skiss line, `{ kind, from, to }` each, for an editor that colours it.
+  Line-based and stateless, silent about what it does not recognise, and it
+  reads its name productions and its primitive table out of the parser, so the
+  colours cannot disagree with the compiler. It is not a parser and reports
+  nothing; diagnostics stay `parse` and `resolve`'s. The Obsidian plugin and
+  the playground import it instead of keeping a copy each
+  ([ADR 0010](docs/adr/0010-tokeniser-in-the-package.md)). No new dependency.
+
 ## [0.5.0] - 2026-09-20
 
 Specification 0.3: inheritance. `Child < Parent` is in the language, compiles
