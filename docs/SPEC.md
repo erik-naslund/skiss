@@ -243,7 +243,7 @@ File extension: `.skiss`. Code fence language: `skiss`.
 | `*` | `identifier: true` |
 | `@System` | `annotations: {system: System}` |
 | `< Parent` | `is_a: Parent` |
-| a field replacing an inherited one | an entry under that class's `slot_usage:` |
+| a field replacing an inherited one | an attribute of the child with the same name; the parent's attribute is not repeated for any other field |
 | `~ Other` | `close_mappings: [<prefix>:Other]` |
 | `= Other.field` | `annotations: {joins_to: "Other.field"}` |
 | `# text` | `description: text` |
@@ -252,7 +252,7 @@ File extension: `.skiss`. Code fence language: `skiss`.
 
 Fields compile to class-local `attributes`, never to top-level `slots` ([ADR 0005](adr/0005-class-local-attributes.md)).
 
-**Inheritance.** `is_a` carries it; the parent's attributes are not repeated in the child. A field that replaces an inherited one (§3.10) is written under `slot_usage` instead of `attributes`, with the body it would have had as an attribute. The `<` that closes a circle is not written at all. The keys of a class are written in the order `description`, `is_a`, `annotations`, `close_mappings`, `slot_usage`, `attributes`.
+**Inheritance.** `is_a` carries it; the parent's attributes are not repeated in the child. A field that replaces an inherited one (§3.10) is an entry of the child's own `attributes`, like any other field: LinkML induces it over the attribute of that name the child would otherwise inherit. The `<` that closes a circle is not written at all. The keys of a class are written in the order `description`, `is_a`, `annotations`, `close_mappings`, `attributes`.
 
 **Enum naming.** An inline enum on field `climate` becomes `ClimateEnum`. Fields with the same name and identical value sets share one enum. Fields with the same name and different value sets are each class-qualified: `PlanetClimateEnum`, `MoonClimateEnum`.
 
@@ -394,7 +394,7 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 |---|---|
 | a class | a class line |
 | a class annotated `undeclared: true` | nothing: it is the stub a reference left behind (§5.1) |
-| the class's `attributes`, then the schema `slots` the class lists, in that order | fields |
+| the class's `attributes`, then the schema `slots` the class lists, in that order | fields; an attribute that shadows a slot the class inherits is a field like any other, and is the field that replaces it (§3.10) |
 | `identifier: true` | `*` |
 | `is_a` | `< Parent`; a parent the schema does not define is an undeclared class, as a reference to one is |
 | an entry under `slot_usage` naming a slot the class inherits | a field on the child, read from that entry alone |
@@ -437,7 +437,7 @@ Dropped: pattern on 1 slot. Renamed: 6 names. Inlined: 1 enum.
 
 A projection that dropped nothing reports an empty line, not a line saying that nothing was dropped.
 
-**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`) and a column-0 comment, which no document node holds, does not survive. A class that replaces an inherited field is one more thing canonical form decides: `attributes` and `slot_usage` are two blocks, so the fields that replace come back after the fields that do not, whatever order they were written in. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
+**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`) and a column-0 comment, which no document node holds, does not survive. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
 
 ### 8.1 Editing a projected schema
 
