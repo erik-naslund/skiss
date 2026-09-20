@@ -32,12 +32,22 @@ Read an existing LinkML schema and project it into Skiss (SPEC §8), reporting w
 
 Done: `toSkiss`, `fromLinkML`, `importLinkML` and the `skiss import` command. The release itself is its own PR.
 
+## Milestone 4: Pictures, then inheritance (0.5.0)
+
+What workshop use asked for first. In order:
+
+1. **`skiss render`** ([#63](https://github.com/erik-naslund/skiss/issues/63)): an SVG or a PNG from a sketch, through the Mermaid CLI when it is installed. The library stays browser-safe; the command delegates.
+2. **Inheritance with `<`** ([#64](https://github.com/erik-naslund/skiss/issues/64)): a SPEC 0.3 decision first, then the parser, both generators, the import (`is_a`) and the printer. The most common thing the LinkML import drops today.
+
 ## Later, unscheduled
 
-- **Export to a drawing format.** A generator that produces a file a drawing tool can open, with layout. Which format is a decision for when it is built.
 - **Editing a projected schema** (SPEC §8.1): stable identity, merge-back, the two modes.
-- **Inheritance, transformations on `=`, composite keys.** Each waits for a real model to demand it.
+- **Transformations on `=`, composite keys, mixins.** Each waits for a real model to demand it.
+- **Export to a drawing format** is no longer planned here: Mermaid text pastes into Excalidraw and converts, which covers the need. A drawing renderer with remembered positions belongs to the web editor below.
 
 ## Not in this repository
 
 Live editors and plugins that render Skiss while you type are separate projects built on the `skiss` package. They have their own roadmaps.
+
+- The Obsidian plugin: [obsidian-skiss](https://github.com/erik-naslund/obsidian-skiss).
+- A web editor with a live split pane, hosted on GitHub Pages: scoped in [#65](https://github.com/erik-naslund/skiss/issues/65), to get its own repository when milestone 4 step 1 is done.
