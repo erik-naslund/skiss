@@ -45,3 +45,28 @@ Person @Registry
 Voyage
   id*
   status: planned|planned|sailing
+
+# E_UNPARSABLE: a class line with two parents
+Frigate < Ship, Vessel
+
+# E_BAD_NAME: a primitive where a parent class belongs
+Sloop < int
+
+# W_UNDECLARED_CLASS: a parent that is not declared
+Cutter < Phantom
+  hull
+
+# W_REDUNDANT_OVERRIDE: a field identical to the one it inherits
+Tug < Ship
+  name
+# W_MULTIPLE_IDENTIFIERS: an identifier on top of an inherited one
+  towId*
+# E_UNPARSABLE: `<` on a field line
+  parent < Ship
+
+# E_INHERITANCE_CYCLE: two classes that inherit from each other
+Barge < Punt
+  cargo
+
+Punt < Barge
+  id*

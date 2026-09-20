@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The specification is at **0.3**: inheritance with `<`. `Child < Parent` on
+  a class line, before `@` and `~`, gives the child every field the parent
+  has, the identifier included. One parent; a second, or a `<` on a field
+  line, is `E_UNPARSABLE`, and a primitive as a parent is `E_BAD_NAME`. A
+  field written on the child with the name of an inherited one replaces it,
+  and is `W_REDUNDANT_OVERRIDE` when it says nothing the parent does not. A
+  parent that is not declared is `W_UNDECLARED_CLASS` and a stub, as any
+  reference is; a circle of `<` is `E_INHERITANCE_CYCLE` on the line that
+  closes it, and that one `<` is not carried. It compiles to `is_a`, with a
+  replacing field under `slot_usage`, and draws as `Parent <|-- Child`.
+  `skiss import` reads both back, so `is_a` is no longer dropped.
+
 ### Added
 
 - `skiss render <file>` writes a picture: `-o model.svg` or `-o model.png`,

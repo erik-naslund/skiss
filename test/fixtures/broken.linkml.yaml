@@ -60,7 +60,33 @@ classes:
       status:
         range: StatusEnum
 
+  Cutter:
+    is_a: Phantom
+    attributes:
+      hull: {}
+
+  Tug:
+    is_a: Ship
+    slot_usage:
+      name: {}
+    attributes:
+      towId: {}
+
+  Barge:
+    is_a: Punt
+    attributes:
+      cargo: {}
+
+  Punt:
+    attributes:
+      id:
+        identifier: true
+
   Ghost:
+    annotations:
+      undeclared: true
+
+  Phantom:
     annotations:
       undeclared: true
 

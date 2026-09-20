@@ -36,3 +36,7 @@ BookListing @Website ~ Book             # what the public site shows
   hits: int
   rating: 1|2|3|4|5                     # stars, as readers left them
   format: hardback|paperback|audio
+
+Ebook < Book @Catalog                   # a licensed download, not a copy on a shelf
+  fileSize: int                         # in megabytes
+  status: available|licensed|expired    # the licence, not the shelf
