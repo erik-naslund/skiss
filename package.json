@@ -1,6 +1,6 @@
 {
   "name": "@eriknaslund/skiss",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A text notation for sketching data models, compiled to LinkML",
   "type": "module",
   "license": "MIT",
