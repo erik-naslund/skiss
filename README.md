@@ -41,6 +41,7 @@ Skiss is text you can type while someone talks. A field is one line. A change is
 - **What you leave out means "not yet".** Never "unknown", never "none". A sketch is silent about what you do not know.
 - **`@Catalog` says which system owns a thing.** On a class, or on a single field when the box is really a view over two systems.
 - **`~` and `=` are two different statements.** `~` says two classes are about the same thing. `=` says which field joins to which. The first is a domain conversation, the second an integration conversation.
+- **`<` inherits, once.** `Jedi < Character` on the class line: the child has everything the parent has and adds its own. One parent, no mixins; it compiles to `is_a`.
 - **`#` describes, `?` doubts.** A description ends up in generated documentation. A doubt never does.
 - **Every line stands on its own.** A half-typed line breaks that line and nothing else, so the diagram keeps rendering while you type.
 - **Everything you can write compiles to valid LinkML.** Skiss is a strict subset. Nothing is lost on the way up.
@@ -66,7 +67,7 @@ Or without installing: `npx @eriknaslund/skiss diagram model.skiss`.
 
 `skiss compile model.skiss` writes a LinkML schema instead, as YAML on standard output. `--json` writes the same schema as JSON, `--name` sets the schema name (it defaults to the file name without its extension, and to `sketch` when reading standard input), and `-o`, `-`, `--strict` and the diagnostics work exactly as they do for `diagram`.
 
-`skiss import schema.linkml.yaml` goes the other way: it reads a LinkML schema, YAML or JSON, and writes Skiss. What the projection could not carry — `is_a`, patterns, `required`, the names it had to convert — is one line on standard error before the diagnostics, because a sketch is a smaller language than LinkML and that line says by how much. `-o`, `-` and the diagnostics work as they do for `compile`; `--strict` exits 1 when the projected sketch has a diagnostic, and also when anything was dropped. An input that is not a schema at all — not YAML, or YAML no schema can be read out of — produces no sketch, says why on standard error, and exits 2, the code every command uses for unreadable input.
+`skiss import schema.linkml.yaml` goes the other way: it reads a LinkML schema, YAML or JSON, and writes Skiss. What the projection could not carry — patterns, `required`, `mixins`, the names it had to convert — is one line on standard error before the diagnostics, because a sketch is a smaller language than LinkML and that line says by how much. `-o`, `-` and the diagnostics work as they do for `compile`; `--strict` exits 1 when the projected sketch has a diagnostic, and also when anything was dropped. An input that is not a schema at all — not YAML, or YAML no schema can be read out of — produces no sketch, says why on standard error, and exits 2, the code every command uses for unreadable input.
 
 `npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toSkiss`, `fromLinkML`, `formatDropped`, `importLinkML` and `VERSION`, browser-safe.
 
@@ -88,7 +89,7 @@ Editors that render Skiss live are separate projects built on this package. This
 
 0.4.0, published on npm as [`@eriknaslund/skiss`](https://www.npmjs.com/package/@eriknaslund/skiss). The language parses, resolves and diagnoses; `skiss diagram` draws it, `skiss compile` writes LinkML that the real LinkML toolchain validates in CI, and `skiss import` reads a LinkML schema back into a sketch. The library exports the same in both directions and is browser-safe.
 
-The [specification](docs/SPEC.md) is at 0.2 and moves when the language does, which is not with every release. Not built: inheritance, and editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
+The [specification](docs/SPEC.md) is at 0.3 and moves when the language does, which is not with every release. Not built: editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
 
 ## License
 

@@ -41,6 +41,11 @@ classDiagram
     +1|2|3|4|5 rating
     +hardback|paperback|audio format
   }
+  class Ebook {
+    <<Catalog>>
+    +int fileSize
+    +available|licensed|expired status
+  }
   Book --> Author : author
   Author "1" --> "*" Book : books
   Loan --> Book : book
@@ -48,3 +53,4 @@ classDiagram
   Member "1" --> "*" Loan : loans
   BookListing ..> Book : similar
   BookListing ..> Book : bookIsbn = isbn
+  Book <|-- Ebook

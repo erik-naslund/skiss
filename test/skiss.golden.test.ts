@@ -23,6 +23,7 @@ const ALL = ['basic', 'spec-example', 'systems', 'broken'];
 function meaning(doc: Document) {
   return doc.classes.map((cls) => ({
     name: cls.name.text,
+    parent: cls.parent?.text,
     system: cls.system?.text,
     similarTo: cls.similarTo?.text,
     description: cls.description,

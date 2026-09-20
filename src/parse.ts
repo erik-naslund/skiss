@@ -66,7 +66,7 @@ function primitiveFor(word: string): Primitive | undefined {
 }
 
 const FIELD_ORDER = 'name, `*`, `: type`, `@System`, `= Class.field`, then `#` and `?`';
-const CLASS_ORDER = 'name, `@System`, `~ Class`, then `#` and `?`';
+const CLASS_ORDER = 'name, `< Parent`, `@System`, `~ Class`, then `#` and `?`';
 
 export function parse(source: string): Document {
   const classes: ClassNode[] = [];
@@ -183,7 +183,20 @@ function splitTrailer(text: string): Trailer {
 // ---------------------------------------------------------------------------
 // Tokens. Whitespace between tokens is not significant; `[]` is one token.
 
-type TokenKind = 'word' | '*' | ':' | '@' | '~' | '=' | '.' | '|' | '[]' | '[' | 'other';
+type TokenKind =
+  | 'word'
+  | '*'
+  | ':'
+  | '@'
+  | '~'
+  | '='
+  | '.'
+  | '|'
+  | '<'
+  | ','
+  | '[]'
+  | '['
+  | 'other';
 
 interface Token {
   kind: TokenKind;
@@ -193,7 +206,7 @@ interface Token {
 }
 
 const WORD = /[\p{L}\p{N}_-]+/uy;
-const OPERATORS: readonly TokenKind[] = ['*', ':', '@', '~', '=', '.', '|', '['];
+const OPERATORS: readonly TokenKind[] = ['*', ':', '@', '~', '=', '.', '|', '<', ',', '['];
 
 function tokenize(head: string): Token[] {
   const tokens: Token[] = [];
@@ -285,6 +298,15 @@ function parseClassLine(text: string, line: number): Result<ClassNode> {
     );
   }
   const node: Omit<ClassNode, 'fields'> = { name: name(head, line), line };
+
+  // SPEC §3.10: `< Parent`, before `@` and `~`.
+  const lt = peek(c);
+  if (lt?.kind === '<') {
+    take(c);
+    const parent = parseParent(c, lt);
+    if (!parent.ok) return parent;
+    node.parent = parent.value;
+  }
 
   const at = peek(c);
   if (at?.kind === '@') {
@@ -436,6 +458,38 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
   return { ok: true, value: node };
 }
 
+// "<" ClassName on a class line. SPEC §3.10. `lt` is already consumed.
+function parseParent(c: Cursor, lt: Token): Result<Name> {
+  const parent = take(c);
+  if (parent === undefined || parent.kind !== 'word') {
+    return fail(
+      'E_UNPARSABLE',
+      'Expected a class name after `<`, e.g. `Jedi < Character`',
+      c.line,
+      parent ?? afterSpan(lt),
+    );
+  }
+  if (!CLASS_NAME.test(parent.text)) {
+    // A primitive is not a class (SPEC §3.10), and it is the one wrong parent
+    // worth naming: `Jedi < int` is a type where a class has to be.
+    const message = Object.hasOwn(PRIMITIVES, parent.text)
+      ? `\`${parent.text}\` is a primitive, not a class; a parent is a class`
+      : `The class after \`<\` must be UpperCamelCase: \`${parent.text}\``;
+    return fail('E_BAD_NAME', message, c.line, parent);
+  }
+  // SPEC §3.10: one parent. `A < B, C` is a list, and there is no list here.
+  const next = peek(c);
+  if (next?.kind === ',' || next?.kind === '<') {
+    return fail(
+      'E_UNPARSABLE',
+      'A class has one parent; `<` takes a single class name',
+      c.line,
+      next,
+    );
+  }
+  return { ok: true, value: name(parent, c.line) };
+}
+
 // "@" System, shared by class and field lines. SPEC §3.5. `at` is already consumed.
 function parseSystem(c: Cursor, at: Token): Result<Name> {
   const system = take(c);
@@ -561,7 +615,7 @@ function unexpected<T>(
   kind: 'class' | 'field',
   order: string,
 ): Result<T> {
-  const modifiers: TokenKind[] = kind === 'field' ? ['*', ':', '@', '='] : ['@', '~'];
+  const modifiers: TokenKind[] = kind === 'field' ? ['*', ':', '@', '='] : ['<', '@', '~'];
   if (modifiers.includes(token.kind)) {
     return fail(
       'E_UNPARSABLE',
@@ -570,10 +624,11 @@ function unexpected<T>(
       token,
     );
   }
-  if (token.text === '<') {
+  if (token.kind === '<') {
+    // SPEC §3.10: class level only.
     return fail(
       'E_UNPARSABLE',
-      '`<` is reserved for inheritance and not yet part of the language',
+      '`<` marks inheritance and belongs on the class line: `Child < Parent`',
       line,
       token,
     );

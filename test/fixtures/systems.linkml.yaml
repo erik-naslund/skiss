@@ -105,6 +105,20 @@ classes:
       format:
         range: FormatEnum
 
+  Ebook:
+    description: a licensed download, not a copy on a shelf
+    is_a: Book
+    annotations:
+      system: Catalog
+    slot_usage:
+      status:
+        description: the licence, not the shelf
+        range: EbookStatusEnum
+    attributes:
+      fileSize:
+        description: in megabytes
+        range: integer
+
 enums:
   FormatEnum:
     permissible_values:
@@ -132,3 +146,8 @@ enums:
       "3":
       "4":
       "5":
+  EbookStatusEnum:
+    permissible_values:
+      available:
+      licensed:
+      expired:

@@ -56,6 +56,12 @@ export interface FieldNode {
 
 export interface ClassNode {
   name: Name;
+  /**
+   * The class after `<` (SPEC §3.10), set by `parse` whenever one is written.
+   * `resolve` clears it on the class whose `<` closes a circle, as it clears
+   * `identifier` on a second `*`, so no generator has to know about circles.
+   */
+  parent?: Name;
   system?: Name;
   similarTo?: Name;
   description?: string;
@@ -68,7 +74,8 @@ export type Severity = 'error' | 'warning';
 
 /**
  * Codes from the tables in docs/ARCHITECTURE.md. `parse` adds the `E_` codes,
- * `resolve` the `W_` codes, and `importLinkML` the one code of its own,
+ * `resolve` the `W_` codes and `E_INHERITANCE_CYCLE`, the one error no single
+ * line can see (SPEC §7), and `importLinkML` the one code of its own,
  * `E_NOT_YAML`, for a text no schema can be read out of.
  */
 export type DiagnosticCode =
@@ -77,6 +84,7 @@ export type DiagnosticCode =
   | 'E_MISSING_TYPE'
   | 'E_UNCLOSED_MANY'
   | 'E_BAD_NAME'
+  | 'E_INHERITANCE_CYCLE'
   | 'W_UNKNOWN_TYPE'
   | 'W_UNDECLARED_CLASS'
   | 'W_UNDECLARED_FIELD'
@@ -84,6 +92,7 @@ export type DiagnosticCode =
   | 'W_DUPLICATE_FIELD'
   | 'W_DUPLICATE_ENUM_VALUE'
   | 'W_MULTIPLE_IDENTIFIERS'
+  | 'W_REDUNDANT_OVERRIDE'
   | 'E_NOT_YAML';
 
 export interface Diagnostic {

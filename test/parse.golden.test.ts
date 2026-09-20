@@ -39,7 +39,11 @@ describe('broken.skiss (ARCHITECTURE.md diagnostics table)', () => {
     const golden = JSON.parse(fixture('broken.diagnostics.json')) as {
       diagnostics: { code: string; severity: string; line: number }[];
     };
-    const expected = golden.diagnostics.filter((d) => d.severity === 'error');
+    // Every error but one comes from `parse`: a circle of `<` needs more
+    // than one line to see, so `resolve` is where it is found (SPEC §7).
+    const expected = golden.diagnostics.filter(
+      (d) => d.severity === 'error' && d.code !== 'E_INHERITANCE_CYCLE',
+    );
     const actual = doc.diagnostics.map(({ code, severity, line }) => ({ code, severity, line }));
     expect(actual).toEqual(expected);
   });

@@ -49,6 +49,10 @@ export function toMermaid(doc: Document, opts?: MermaidOptions): string {
 
   for (const cls of resolved.classes) {
     const from = cls.name.text;
+    // SPEC §3.10. Mermaid draws inheritance parent-first and unlabelled; the
+    // parent's fields are not repeated in the child's box. `resolve` has
+    // already cleared the `<` that closes a circle.
+    if (cls.parent !== undefined) lines.push(`  ${cls.parent.text} <|-- ${from}`);
     // `~` is Mermaid's generic-type delimiter and vanishes from labels, so
     // the label is the word `similar`.
     if (cls.similarTo !== undefined) lines.push(`  ${from} ..> ${cls.similarTo.text} : similar`);

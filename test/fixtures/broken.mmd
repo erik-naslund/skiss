@@ -28,7 +28,23 @@ classDiagram
     *id
     +planned|planned|sailing status
   }
+  class Cutter {
+    +hull
+  }
+  class Tug {
+    +name
+    +towId
+  }
+  class Barge {
+    +cargo
+  }
+  class Punt {
+    *id
+  }
   class Ghost {
+    <<undeclared>>
+  }
+  class Phantom {
     <<undeclared>>
   }
   Ship --> Person : captain
@@ -36,3 +52,6 @@ classDiagram
   Vessel ..> Ghost : similar
   Vessel ..> Ship : shipId = id
   Vessel ..> Person : captainName = fullName
+  Phantom <|-- Cutter
+  Ship <|-- Tug
+  Punt <|-- Barge

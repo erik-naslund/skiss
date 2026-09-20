@@ -17,6 +17,7 @@ skiss/
     ast.ts            # Document, ClassNode, FieldNode, Diagnostic
     parse.ts          # per-line parser; the only cross-line state is the current class
     resolve.ts        # cross-line pass: links, duplicates, warnings
+    inheritance.ts    # the parent chains a `<` builds, read once and shared
     compile.ts        # source -> { output, diagnostics } in one call
     diagnostics.ts    # formatDiagnostic: the file:line:col text form
     generators/
@@ -123,7 +124,7 @@ Every node carries its source position: a line number, and a column range for ea
 
 ```ts
 interface Document  { classes: ClassNode[]; diagnostics: Diagnostic[]; undeclared?: Name[] }
-interface ClassNode { name: Name; system?: Name; similarTo?: Name; description?: string; note?: string; fields: FieldNode[]; line: number }
+interface ClassNode { name: Name; parent?: Name; system?: Name; similarTo?: Name; description?: string; note?: string; fields: FieldNode[]; line: number }
 interface FieldNode { name: Name; identifier: boolean; identifierAt?: Name; type?: TypeRef; system?: Name; joinsTo?: { className: Name; fieldName: Name }; description?: string; note?: string; line: number }
 type TypeRef = { kind: 'primitive'; name: Primitive; written: Name; many: boolean }
              | { kind: 'class';     name: Name;                     many: boolean }
@@ -133,13 +134,13 @@ interface Name { text: string; line: number; col: number; end: number }
 interface Diagnostic { severity: 'error' | 'warning'; code: string; message: string; line: number; col?: number; end?: number }
 ```
 
-`undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
+`undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `parent` is the class after `<` (SPEC §3.10); `resolve` clears it on the class whose `<` closes a circle, as it clears `identifier` on a second `*`, so a generator never has to know a circle from a chain. Which fields a class inherits along that chain is `inheritance.ts`, which `resolve` and `toLinkML` both read rather than keeping a chain each. `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
 
 Exact shapes are decided in code. What must be present is the position on every node and the diagnostic list on the document.
 
 ## Diagnostics
 
-Errors come from `parse` and mean "this line could not be read and was skipped". Warnings come from `resolve` and mean "this line was read but says something questionable". Every diagnostic carries a stable code.
+Errors come from `parse` and mean "this line could not be read and was skipped". Warnings come from `resolve` and mean "this line was read but says something questionable". The one exception is `E_INHERITANCE_CYCLE`, an error `resolve` produces because no single line can see a circle of `<` (SPEC §7). Every diagnostic carries a stable code.
 
 | Code | Severity | Trigger |
 |---|---|---|
@@ -147,14 +148,16 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 | `E_FIELD_WITHOUT_CLASS` | error | An indented line with no current class: before any class line, or after a class line that failed to parse. A failed class line clears the current class so its fields are not silently attached to the previous one. |
 | `E_MISSING_TYPE` | error | A colon with nothing after it. |
 | `E_UNCLOSED_MANY` | error | `[` without `]`. |
-| `E_BAD_NAME` | error | A class name not in UpperCamelCase, or a field name not in lowerCamelCase. |
+| `E_BAD_NAME` | error | A class name not in UpperCamelCase, or a field name not in lowerCamelCase. A parent that is a primitive is this too, with a message naming it. |
+| `E_INHERITANCE_CYCLE` | error | A `<` that closes a circle, on the last of the circle's classes to be declared. From `resolve`; the `<` is cleared and nothing else changes. |
 | `W_UNKNOWN_TYPE` | warning | Lowercase type that is not a primitive and has no `\|`. Falls back to string. Suggests a primitive when the edit distance is small. |
 | `W_UNDECLARED_CLASS` | warning | `: X`, `~ X` or `= X.f` where X is not declared. Suggests the primitive when X is one written with a capital. |
 | `W_UNDECLARED_FIELD` | warning | `= X.f` where X exists but has no field f. |
 | `W_DUPLICATE_CLASS` | warning | Two classes with the same name. |
 | `W_DUPLICATE_FIELD` | warning | Two fields with the same name in one class. |
 | `W_DUPLICATE_ENUM_VALUE` | warning | The same value twice in one inline enum. First wins; the line is kept as written. |
-| `W_MULTIPLE_IDENTIFIERS` | warning | More than one `*` in a class. First wins. |
+| `W_MULTIPLE_IDENTIFIERS` | warning | More than one `*` in a class, an inherited one included. First wins, and an inherited one is first. |
+| `W_REDUNDANT_OVERRIDE` | warning | A field identical to the one it replaces in a parent. Identical is what the two mean, so an alias is not a difference. |
 
 This table is the contract for `broken.skiss` in the fixtures.
 
@@ -174,6 +177,7 @@ Checked against a real Mermaid parser. The three surprises are marked.
 | field with a type | `+int name`, `+Planet homeworld`, `+Film[] films`, `+arid\|temperate climate`, `+red\|green[] tags`. The Skiss type text is used verbatim, unknown types included. |
 | `*` | `*` replaces the `+` visibility marker: `*id` for an untyped identifier, `*int code` for a typed one. **A trailing `*` is Mermaid's abstract-member marker and disappears.** |
 | `@System` on a field | appended to the member: `+int popularityRank @Community` |
+| `< Parent` | `Parent <\|-- Child`, unlabelled and parent first. The parent's fields are not repeated in the child's box. |
 | `: OtherClass` | `A --> B : fieldName` |
 | `: OtherClass[]` | `A "1" --> "*" B : fieldName` |
 | `~ Other` | `A ..> B : similar`. **`~` is Mermaid's generic-type delimiter and vanishes from labels.** |
@@ -182,7 +186,7 @@ Checked against a real Mermaid parser. The three surprises are marked.
 | `# text` | omitted |
 | `? text` | omitted by default. With `notes: true`, `note for Class "text"` for a class doubt and `note for Class "field: text"` for a field doubt. **Note lines are emitted before any relation line; Mermaid fails to parse a note that follows a `..>` relation.** |
 
-Output order: classes, undeclared placeholders, notes, relations. Two-space indentation, no trailing whitespace, one trailing newline.
+Output order: classes, undeclared placeholders, notes, relations. A class's relations are its `<` first, then `~`, then its fields in order. Two-space indentation, no trailing whitespace, one trailing newline.
 
 **Empty document.** A document with no classes produces the single line `classDiagram`. Mermaid refuses to parse a class diagram with no statements, and nothing in scope can be added to make it parse (a `direction` hint is layout). Anything that renders live must special-case an empty buffer: show nothing, not a Mermaid error.
 
@@ -198,9 +202,10 @@ Every mapping is the inverse of a §5.1 row. Everything LinkML says that §5.1 h
 
 | `kind` | What it reports |
 |---|---|
-| the LinkML key (`is_a`, `mixins`, `pattern`, `required`, `slot_usage`, …) | that key was on the element and is not carried |
+| the LinkML key (`mixins`, `pattern`, `required`, `slot_usage`, …) | that key was on the element and is not carried |
 | a key the mapping does carry (`identifier`, `multivalued`, `range`, `attributes`, `slots`) | the key was there with a value the reader cannot use; `detail` says what was found, and nothing is coerced |
 | `renamed` | a name that is not `UpperCamelCase` or `lowerCamelCase` was converted; `detail` says from what |
+| `is_a` | an `is_a` written with something that is not a class name; `< Parent` itself is carried (SPEC §8) |
 | `narrowed` | a `range` no Skiss primitive covers; the word survives as an unknown type and falls back to `string` |
 | `inlined` | an enum used by several attributes, where inlining it loses the sharing |
 | `enum_detail` | a permissible value with a body of its own, or a key on the enum other than `permissible_values` |
@@ -232,7 +237,7 @@ test/fixtures/
   foreign.linkml.yaml   foreign.skiss   foreign.dropped.json
 ```
 
-Golden-file comparison. When output changes on purpose, the diff is the review ([ADR 0007](adr/0007-testing-strategy.md)).
+Golden-file comparison. When output changes on purpose, the diff is the review ([ADR 0007](adr/0007-testing-strategy.md)). The derived files are rewritten by the library itself, never by hand: `pnpm build && node scripts/regenerate-fixtures.mjs` writes every `.mmd`, `.linkml.yaml`, `basic.ast.json`, `broken.diagnostics.json` and the `foreign` projection from the `.skiss` inputs and `foreign.linkml.yaml`.
 
 `broken.skiss` is the important one. It holds the mid-typing states: a trailing colon with no type, an unclosed `[`, a field indented under nothing, a `~` to a class that does not exist, a misspelled primitive. Each must produce the diagnostic from the table above *and* a usable partial document.
 

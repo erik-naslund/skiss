@@ -8,12 +8,13 @@ ProgrammeItem                           # An item on the programme: a talk, a br
   title                                 # What the programme prints for it.
   updatedAt: datetime                   # When the row last changed.
 
-Talk                                    # A talk somebody gives.
+Talk < ProgrammeItem                    # A talk somebody gives.
   speaker: Person                       # Who gives it.
   roomCode
   state: draft|scheduled|cancelled      # Where the talk is in the programme.
   audienceLevel: introductory|intermediate|advanced
   recordingUrl: uri
+  title                                 # The title as the speaker wrote it.
 
 Person                                  # Somebody who appears in the programme.
   fullName

@@ -56,17 +56,13 @@
     "detail": "from `talk`"
   },
   {
-    "kind": "is_a",
-    "element": "Talk"
+    "kind": "renamed",
+    "element": "Talk",
+    "detail": "`ProgrammeItem` from `programme_item`"
   },
   {
     "kind": "mixins",
     "element": "Talk"
-  },
-  {
-    "kind": "slot_usage",
-    "element": "Talk",
-    "detail": "`title` is inherited and not in the sketch"
   },
   {
     "kind": "renamed",
@@ -99,6 +95,10 @@
   {
     "kind": "comments",
     "element": "Talk.recordingUrl"
+  },
+  {
+    "kind": "pattern",
+    "element": "Talk.title"
   },
   {
     "kind": "renamed",

@@ -14,6 +14,13 @@
     { "code": "W_UNDECLARED_CLASS", "severity": "warning", "line": 34 },
     { "code": "W_UNDECLARED_FIELD", "severity": "warning", "line": 38 },
     { "code": "W_DUPLICATE_CLASS", "severity": "warning", "line": 41 },
-    { "code": "W_DUPLICATE_ENUM_VALUE", "severity": "warning", "line": 47 }
+    { "code": "W_DUPLICATE_ENUM_VALUE", "severity": "warning", "line": 47 },
+    { "code": "E_UNPARSABLE", "severity": "error", "line": 50 },
+    { "code": "E_BAD_NAME", "severity": "error", "line": 53 },
+    { "code": "W_UNDECLARED_CLASS", "severity": "warning", "line": 56 },
+    { "code": "W_REDUNDANT_OVERRIDE", "severity": "warning", "line": 61 },
+    { "code": "W_MULTIPLE_IDENTIFIERS", "severity": "warning", "line": 63 },
+    { "code": "E_UNPARSABLE", "severity": "error", "line": 65 },
+    { "code": "E_INHERITANCE_CYCLE", "severity": "error", "line": 71 }
   ]
 }

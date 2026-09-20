@@ -1,9 +1,14 @@
 # Fixtures
 
 Golden files. Each fixture is a `.skiss` input next to the outputs it must
-produce, derived by hand from `docs/SPEC.md` and the mapping tables in
+produce, derived from `docs/SPEC.md` and the mapping tables in
 `docs/ARCHITECTURE.md`. The code is held to these files, not the other way
 round. A fixture change is a language change and is reviewed as one.
+
+The inputs — the `.skiss` files and `foreign.linkml.yaml` — are written by
+hand. The outputs beside them are written by the library itself, with
+`pnpm build && node scripts/regenerate-fixtures.mjs`, so a golden is what
+the code produces and the diff is the review.
 
 **basic** (`basic.skiss`, `basic.ast.json`, `basic.mmd`,
 `basic.linkml.yaml`). The example from SPEC §2, verbatim. It uses every
@@ -23,12 +28,14 @@ exercise the corners `basic` does not: a field that names its own
 enum, an enum of numeric values (`rating`), which reaches LinkML as quoted
 permissible values, a class with no identifier, a description and a doubt on class lines,
 a description whose text contains a `?` followed by a real doubt, a field
-with only a doubt, the `integer` and `boolean` aliases, and a column-0
-comment. Its Mermaid output is derived with `notes` off, so no description
+with only a doubt, the `integer` and `boolean` aliases, a column-0
+comment, and a class that inherits (`Ebook < Book`), which brings the
+identifier with it and replaces one inherited field. Its Mermaid output is derived with `notes` off, so no description
 or doubt appears in it. `systems.linkml.yaml` is the schema for the same
 model, and is where both enum-naming branches are under the LinkML gate:
 `format` shared between two classes, `status` qualified into
-`BookStatusEnum` and `LoanStatusEnum`.
+`BookStatusEnum`, `LoanStatusEnum` and `EbookStatusEnum`. It is also where
+`is_a` and a `slot_usage` override are under it.
 
 **spec-example** (`spec-example.skiss`, `spec-example.linkml.yaml`). The
 worked example from SPEC §5.3, both halves copied byte for byte. It covers
@@ -50,13 +57,18 @@ referenced but never declared appear as `<<undeclared>>` placeholders.
 `broken.linkml.yaml` is the schema for the same partial document: the
 lines that produce an error are absent from it too, and a class that is
 referenced but never declared is a stub carrying the `undeclared`
-annotation.
+annotation. The inheritance lines are here as well: two parents on one
+class line, a primitive as a parent, `<` on a field line, a parent that is
+not declared, an identifier written on top of an inherited one, a field
+identical to the one it replaces, and two classes that inherit from each
+other, whose closing `<` is the one thing `resolve` cuts.
 
 **foreign** (`foreign.linkml.yaml`, `foreign.skiss`,
 `foreign.dropped.json`). The only fixture that starts as LinkML. A conference
 programme written by hand in another author's style, with everything SPEC §8
-says does not map: global slots two classes share, `is_a`, a mixin class and
-the `mixins` that use it, `slot_usage`, patterns, `required`, `unique_keys`,
+says does not map, and the two things it now does: global slots two classes
+share, `is_a` and a `slot_usage` that overrides an inherited slot, a mixin
+class and the `mixins` that use it, patterns, `required`, `unique_keys`,
 `minimum_value`, `comments`, `see_also`, a `time` range, an enum shared by two
 differently named attributes, an enum whose permissible values carry
 descriptions, snake_case names throughout, a folded multi-line
