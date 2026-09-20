@@ -7,7 +7,6 @@
 // never top-level `slots` (ADR 0005). Never throws.
 
 import type { ClassNode, Document, FieldNode, Primitive } from '../ast.ts';
-import { inheritance } from '../inheritance.ts';
 import { resolve } from '../resolve.ts';
 
 /** A LinkML `annotations` block in the compact `tag: value` form (SPEC §5.3). */
@@ -30,8 +29,6 @@ export interface LinkMLClass {
   is_a?: string;
   annotations?: LinkMLAnnotations;
   close_mappings?: string[];
-  /** The fields that replace an inherited one (SPEC §3.10). */
-  slot_usage?: Record<string, LinkMLAttribute>;
   attributes?: Record<string, LinkMLAttribute>;
 }
 
@@ -79,9 +76,6 @@ export function toLinkML(doc: Document, opts: LinkMLOptions): LinkMLSchema {
   const schemaName = linkmlName(opts.schemaName);
 
   const classes = emittedClasses(resolved.classes);
-  // SPEC §3.10: which of a class's fields replace an inherited one. `resolve`
-  // has already cleared the `<` that closes a circle, so this is a tree.
-  const tree = inheritance(resolved.classes);
   // LinkML keeps classes and enums in one namespace, so the enum names have to
   // avoid every class this schema emits, the undeclared stubs included.
   const classNames = new Set(classes.map((cls) => cls.node.name.text));
@@ -135,11 +129,7 @@ export function toLinkML(doc: Document, opts: LinkMLOptions): LinkMLSchema {
 
   const out = nameKeyed<LinkMLClass>();
   for (const cls of classes) {
-    const inherited = new Set<string>();
-    for (const ancestor of tree.ancestors(cls.node)) {
-      for (const field of ancestor.fields) inherited.add(field.name.text);
-    }
-    out[cls.node.name.text] = buildClass(cls, inherited, mappingPrefix, enums);
+    out[cls.node.name.text] = buildClass(cls, mappingPrefix, enums);
   }
   // SPEC §5.1: a reference to an undeclared class becomes a stub, after the
   // classes that are declared.
@@ -274,7 +264,6 @@ function buildEnums(
 
 function buildClass(
   cls: EmittedClass,
-  inherited: ReadonlySet<string>,
   mappingPrefix: (target: string) => string,
   enums: Map<string, string>,
 ): LinkMLClass {
@@ -298,16 +287,15 @@ function buildClass(
     out.close_mappings = [`${mappingPrefix(target)}:${target}`];
   }
 
-  // SPEC §3.10: a field with the name of an inherited one replaces it, which
-  // LinkML writes as `slot_usage` rather than a second attribute of the name.
+  // SPEC §5.1, Inheritance: a field with the name of an inherited one is an
+  // attribute of the child like any other, and LinkML induces it over the
+  // attribute of that name it would otherwise inherit. Not `slot_usage`,
+  // which LinkML resolves against schema-level slots, of which this schema
+  // has none (ADR 0005).
   const attributes = nameKeyed<LinkMLAttribute>();
-  const usage = nameKeyed<LinkMLAttribute>();
   for (const field of fields) {
-    const name = field.name.text;
-    const target = inherited.has(name) ? usage : attributes;
-    target[name] = buildAttribute(field, node.name.text, enums);
+    attributes[field.name.text] = buildAttribute(field, node.name.text, enums);
   }
-  if (Object.keys(usage).length > 0) out.slot_usage = usage;
   if (Object.keys(attributes).length > 0) out.attributes = attributes;
 
   return out;

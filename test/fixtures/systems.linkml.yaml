@@ -110,14 +110,13 @@ classes:
     is_a: Book
     annotations:
       system: Catalog
-    slot_usage:
-      status:
-        description: the licence, not the shelf
-        range: EbookStatusEnum
     attributes:
       fileSize:
         description: in megabytes
         range: integer
+      status:
+        description: the licence, not the shelf
+        range: EbookStatusEnum
 
 enums:
   FormatEnum:

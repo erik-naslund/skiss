@@ -35,7 +35,7 @@ or doubt appears in it. `systems.linkml.yaml` is the schema for the same
 model, and is where both enum-naming branches are under the LinkML gate:
 `format` shared between two classes, `status` qualified into
 `BookStatusEnum`, `LoanStatusEnum` and `EbookStatusEnum`. It is also where
-`is_a` and a `slot_usage` override are under it.
+`is_a` and a field that replaces an inherited one are under it.
 
 **spec-example** (`spec-example.skiss`, `spec-example.linkml.yaml`). The
 worked example from SPEC §5.3, both halves copied byte for byte. It covers

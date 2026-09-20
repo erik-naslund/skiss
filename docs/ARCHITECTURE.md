@@ -17,7 +17,7 @@ skiss/
     ast.ts            # Document, ClassNode, FieldNode, Diagnostic
     parse.ts          # per-line parser; the only cross-line state is the current class
     resolve.ts        # cross-line pass: links, duplicates, warnings
-    inheritance.ts    # the parent chains a `<` builds, read once and shared
+    inheritance.ts    # the parent chains a `<` builds, walked in one place
     compile.ts        # source -> { output, diagnostics } in one call
     diagnostics.ts    # formatDiagnostic: the file:line:col text form
     generators/
@@ -134,7 +134,7 @@ interface Name { text: string; line: number; col: number; end: number }
 interface Diagnostic { severity: 'error' | 'warning'; code: string; message: string; line: number; col?: number; end?: number }
 ```
 
-`undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `parent` is the class after `<` (SPEC §3.10); `resolve` clears it on the class whose `<` closes a circle, as it clears `identifier` on a second `*`, so a generator never has to know a circle from a chain. Which fields a class inherits along that chain is `inheritance.ts`, which `resolve` and `toLinkML` both read rather than keeping a chain each. `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
+`undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `parent` is the class after `<` (SPEC §3.10); `resolve` clears it on the class whose `<` closes a circle, as it clears `identifier` on a second `*`, so a generator never has to know a circle from a chain. Which fields a class inherits along that chain is `inheritance.ts`, which `resolve` reads for its diagnostics; a generator needs no view of the chain, because a class writes only the fields written on it (SPEC §5.1). `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
 
 Exact shapes are decided in code. What must be present is the position on every node and the diagnostic list on the document.
 
