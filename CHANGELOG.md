@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `skiss render <file>` writes a picture: `-o model.svg` or `-o model.png`,
+  `--format svg|png` when the path does not say, the SVG on standard output
+  when there is no `-o`, and `--scale` for the PNG, which defaults to 2.
+  `--notes`, `--strict` and the diagnostics are `diagram`'s. It renders
+  through the Mermaid CLI (`mmdc`), which you install yourself; the library
+  gains no rendering function and the package gains no browser. With no
+  `mmdc` on `PATH` or in `node_modules/.bin`, it exits 2 with one line
+  saying how to install it.
+
 ## [0.4.0] - 2026-09-15
 
 Specification 0.2, and the fixes from the deep review at 0.3.0 (#52).
