@@ -1,6 +1,6 @@
 # Skiss
 
-**Specification, version 0.2**
+**Specification, version 0.3**
 
 *Applies to skiss 0.4.0.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
 
@@ -50,7 +50,7 @@ CharacterPage @Community ~ Character    # the community wiki's version
   editCount: int
 ```
 
-Classes at column 0, fields indented under them. Six operators (`:` `[]` `|` `@` `~` `=`) and three markers (`*` `#` `?`).
+Classes at column 0, fields indented under them. Seven operators (`:` `[]` `|` `@` `~` `=` `<`) and three markers (`*` `#` `?`). The example above uses every one of them but `<`, which is inheritance (§3.10).
 
 ---
 
@@ -165,10 +165,26 @@ crewSize: int       # is this seats?
 
 The first line has a description ending in a question mark, then a doubt. The second has a description and no doubt.
 
-### 3.10 Reserved
+### 3.10 `<` inherits
+
+```
+Jedi < Character
+  rank: padawan|knight|master
+```
+
+Class level only, and directly after the class name: `@`, `~`, `#` and `?` follow the parent. Whitespace around `<` is not significant.
+
+`Jedi` has every field `Character` has, and then its own. **One parent:** `Jedi < Character, Droid` is unparsable, and so is `<` on a field line. The identifier inherits like any other field, so a class that inherits one and writes its own `*` gets the warning of §3.8: the inherited identifier is the one that stands.
+
+A field written on the child with the name of a field it inherits **replaces** it. The whole field is replaced, not the parts the child writes. A child field that is identical to the field it replaces is a warning: it says nothing the parent does not.
+
+**A parent that is not a declared class** is a warning and leaves a stub, as a reference does (§3.2); the child inherits nothing, because nothing here says what the parent has. A parent that is a primitive is an error: a primitive is not a class.
+
+**A class that inherits from itself**, directly or through its parents, is an error on the line that closes the circle. Every class is kept and so is every other `<`; the one that closes the circle is not carried into the output.
+
+### 3.11 Reserved
 
 - A trailing `?` on a field name (`region?`) is not optional-marking and never will be.
-- `<` after a class name is reserved for inheritance (`Foo < Bar`).
 
 ---
 
@@ -179,7 +195,8 @@ document     = { line } ;
 line         = class-line | field-line | comment-line | blank ;
 
 comment-line = "#" text ;                                  (* at column 0 *)
-class-line   = ClassName [ "@" System ] [ "~" ClassName ] [ trailer ] ;
+class-line   = ClassName [ "<" ClassName ] [ "@" System ]
+                         [ "~" ClassName ] [ trailer ] ;
 field-line   = WS field-name [ "*" ]
                             [ ":" type ]
                             [ "@" System ]
@@ -200,7 +217,7 @@ value        = ( letter | digit ) { letter | digit | "-" | "_" } ;
 WS           = one or more spaces or tabs ;
 ```
 
-Modifier order on a field line is fixed as written.
+Modifier order is fixed as written, on a class line and on a field line alike.
 
 **Whitespace.** A space and a tab are the same character to the grammar. Between tokens it is not significant and any amount of it is allowed: `name : int`, `name:int` and `films: Film []` all read as the same line. `[]` is one token, so `Person[ ]` is an unclosed `[`. What is significant is the whitespace at the start of a line, which is what makes the line a field of the class above it; one or more spaces or tabs, and no further meaning is given to how many. Trailing whitespace is not part of a name, a type or a trailer text. A line that is empty or holds only whitespace is a blank line and is skipped.
 
@@ -225,6 +242,8 @@ File extension: `.skiss`. Code fence language: `skiss`.
 | `a\|b\|c` | generated enum + `range: <Field>Enum` |
 | `*` | `identifier: true` |
 | `@System` | `annotations: {system: System}` |
+| `< Parent` | `is_a: Parent` |
+| a field replacing an inherited one | an entry under that class's `slot_usage:` |
 | `~ Other` | `close_mappings: [<prefix>:Other]` |
 | `= Other.field` | `annotations: {joins_to: "Other.field"}` |
 | `# text` | `description: text` |
@@ -232,6 +251,8 @@ File extension: `.skiss`. Code fence language: `skiss`.
 | reference to an undeclared class | a stub class with `annotations: {undeclared: true}` |
 
 Fields compile to class-local `attributes`, never to top-level `slots` ([ADR 0005](adr/0005-class-local-attributes.md)).
+
+**Inheritance.** `is_a` carries it; the parent's attributes are not repeated in the child. A field that replaces an inherited one (§3.10) is written under `slot_usage` instead of `attributes`, with the body it would have had as an attribute. The `<` that closes a circle is not written at all. The keys of a class are written in the order `description`, `is_a`, `annotations`, `close_mappings`, `slot_usage`, `attributes`.
 
 **Enum naming.** An inline enum on field `climate` becomes `ClimateEnum`. Fields with the same name and identical value sets share one enum. Fields with the same name and different value sets are each class-qualified: `PlanetClimateEnum`, `MoonClimateEnum`.
 
@@ -350,14 +371,14 @@ This pair is a golden test: the Skiss input must produce exactly this YAML.
 
 ## 6. Not in the language
 
-Required/optional, inheritance, cardinality beyond `[]`, composite keys, patterns, units, constraints, sync direction or freshness on `@`, transformations on `=`, mapping kinds other than `~`, and layout. See [DESIGN.md](DESIGN.md) for why.
+Required/optional, multiple inheritance, cardinality beyond `[]`, composite keys, patterns, units, constraints, sync direction or freshness on `@`, transformations on `=`, mapping kinds other than `~`, and layout. See [DESIGN.md](DESIGN.md) for why.
 
 ---
 
 ## 7. Parsing contract
 
 1. **Parse** reads each line on its own. A line that does not match the grammar produces an *error* attached to that line and is skipped. Nothing on one line affects how another is read.
-2. **Resolve** runs over the parsed document and links references, finds duplicates, unknown types and undeclared classes. It produces *warnings* only and never removes anything.
+2. **Resolve** runs over the parsed document and links references, finds duplicates, unknown types and undeclared classes. It produces *warnings*, and one *error* no single line can see: a circle of `<` (§3.10). It never removes anything.
 
 A parser never throws and never returns nothing. It returns whatever it could read plus a list of diagnostics, each with a severity, a stable code, a line, and where possible a column range. The codes are listed in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -375,6 +396,8 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 | a class annotated `undeclared: true` | nothing: it is the stub a reference left behind (§5.1) |
 | the class's `attributes`, then the schema `slots` the class lists, in that order | fields |
 | `identifier: true` | `*` |
+| `is_a` | `< Parent`; a parent the schema does not define is an undeclared class, as a reference to one is |
+| an entry under `slot_usage` naming a slot the class inherits | a field on the child, read from that entry alone |
 | `range` naming a class of the schema, or any other capitalised name | a class reference |
 | `range` naming an enum of the schema | an inline enum, its `permissible_values` keys in order |
 | `integer`; `float`, `double`, `decimal`; `boolean`; `date`; `datetime`; `uri`, `uriorcurie` | `int`, `float`, `bool`, `date`, `datetime`, `uri` |
@@ -398,12 +421,12 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 
 ### The report
 
-Everything the table does not carry is reported, never dropped silently: `is_a`, `mixins`, `slot_usage`, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A key the table does carry, written with a value it cannot be read from — an `identifier` or a `multivalued` that is not a boolean, a `range` that is not a name, an `attributes` block that is not a map, a `slots` block that is not a list, an attribute whose body is not a slot definition — is reported under that key too, with what was found there. It is never guessed at: which YAML dialect wrote `yes` is the reader's question, not the sketch's. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. `slot_usage` naming a slot the sketch does not carry — one `is_a` brought in, and `is_a` is dropped — is reported on the class instead, naming the slot. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported; every other key at schema level is reported, one report each.
+Everything the table does not carry is reported, never dropped silently: `mixins`, `slot_usage` the table has no field for, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A key the table does carry, written with a value it cannot be read from — an `identifier` or a `multivalued` that is not a boolean, a `range` that is not a name, an `attributes` block that is not a map, a `slots` block that is not a list, an attribute whose body is not a slot definition — is reported under that key too, with what was found there. It is never guessed at: which YAML dialect wrote `yes` is the reader's question, not the sketch's. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. `slot_usage` naming a slot the sketch cannot find — the class has no parent the schema defines, or no parent of it declares the slot — is reported on the class instead, naming the slot. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported; every other key at schema level is reported, one report each.
 
 The reports are counted, grouped by kind, and written as one line in schema order:
 
 ```
-Dropped: is_a on 4 classes, 3 patterns, 2 mixins, slot_usage on 7 slots.
+Dropped: required on 4 slots, 3 patterns, 2 mixins, slot_usage on 7 slots.
 ```
 
 Converted names and inlined enums are further sentences of the same line:
@@ -414,7 +437,7 @@ Dropped: pattern on 1 slot. Renamed: 6 names. Inlined: 1 enum.
 
 A projection that dropped nothing reports an empty line, not a line saying that nothing was dropped.
 
-**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`) and a column-0 comment, which no document node holds, does not survive. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
+**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`) and a column-0 comment, which no document node holds, does not survive. A class that replaces an inherited field is one more thing canonical form decides: `attributes` and `slot_usage` are two blocks, so the fields that replace come back after the fields that do not, whatever order they were written in. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
 
 ### 8.1 Editing a projected schema
 
@@ -431,6 +454,6 @@ An editor may present a LinkML schema as Skiss, accept edits, and merge them bac
 ## 9. Open questions
 
 1. **Does `=` ever carry a transformation?** Often the real join rule is "their `id` with a prefix stripped". A comment for now; the first thing likely to force a 0.2.
-2. **Inheritance.** Reserved as `<`, not defined. The most likely first thing to be missed.
+2. ~~**Inheritance.** Reserved as `<`, not defined.~~ Settled in 0.3 (§3.10): one parent, on a class line only, and the identifier inherits. Mixins, abstract classes and interfaces are not part of it.
 3. **What breaks first against a real model?**
 4. **Is a single value after the colon that is not a word a type at all?** `priority: 1` is neither an enum (§3.4 needs a pipe) nor an unknown type (§3.2 reads a lowercase word), so it is unparsable, while `priority: 1|2` is an enum. Settled the other way it would need a rule for what a one-value type means.
