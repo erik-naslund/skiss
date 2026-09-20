@@ -37,16 +37,29 @@ skiss/
 
 See [ADR 0003](adr/0003-one-package-two-entry-points.md). Publishing the package is [RELEASING.md](RELEASING.md).
 
+The commands:
+
+| Command | Writes | Needs |
+|---|---|---|
+| `skiss diagram <file>` | a Mermaid class diagram | nothing |
+| `skiss compile <file>` | a LinkML schema, YAML or JSON | nothing |
+| `skiss import <file>` | Skiss, from a LinkML schema | nothing |
+| `skiss render <file>` | an SVG or a PNG of the class diagram | `mmdc`, the Mermaid CLI |
+
+Rendering is delegated rather than implemented: Mermaid lays a class diagram out in a real DOM, so a picture needs a browser engine, and neither the library nor the package will carry one (ADR 0003). `skiss render` produces the Mermaid text with the ordinary pipeline, writes it to a temporary file and runs `mmdc` on it — found on `PATH`, else at `node_modules/.bin/mmdc` under the working directory — with `-b transparent`, `-e svg|png` and, for a PNG, `--scale 2`. `mmdc` not being installed is exit 2 with one line saying how to install it; an `mmdc` that ran and failed gives the command its own exit status. There is no `toSvg` in the library, and `@mermaid-js/mermaid-cli` is a devDependency, so the test suite can render one fixture for real.
+
 Exit codes, the same for every command:
 
 | Code | Means |
 |---|---|
 | 0 | The output was produced. |
 | 1 | `--strict` and the input has diagnostics. The output is still written. |
-| 2 | A usage error, a file that cannot be read, or an input nothing could be read out of: for `import`, a text that is not YAML or a schema `fromLinkML` could not read, which produces no sketch at all. |
+| 2 | A usage error, a file that cannot be read, or an input nothing could be read out of: for `import`, a text that is not YAML or a schema `fromLinkML` could not read, which produces no sketch at all; for `render`, the Mermaid CLI not being installed. |
 | 70 | An internal error, which is a bug in skiss. |
 
 A reader that closes the pipe early (`skiss diagram big.skiss | head`) is not an error: the streams carry an `EPIPE` guard and the command exits 0.
+
+`render` is the one command that can exit with something else: when `mmdc` ran and failed, its status is the command's.
 
 ## Pipeline
 

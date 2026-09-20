@@ -379,6 +379,125 @@ describe('a reader that closes the pipe early (issue #53, M2)', () => {
   });
 });
 
+// Issue #63: `skiss render` is `diagram` plus the Mermaid CLI. The usage
+// rules below hold everywhere; the tests that produce a real picture need a
+// working browser engine, so they run only where `mmdc` can launch one.
+describe('skiss render (issue #63)', () => {
+  const file = join(root, 'test', 'fixtures', 'basic.skiss');
+  const mmdc = join(root, 'node_modules', '.bin', 'mmdc');
+  let mmdcRuns = false;
+
+  // `@mermaid-js/mermaid-cli` is a devDependency, but its Chromium download
+  // can be skipped (PUPPETEER_SKIP_DOWNLOAD=1) and a container running as
+  // root cannot launch the browser at all. Neither is a fault of `render`, so
+  // the picture tests skip instead of failing when this probe does not pass.
+  beforeAll(() => {
+    if (!existsSync(mmdc)) return;
+    const probe = join(tmp, 'probe.mmd');
+    writeFileSync(probe, 'classDiagram\n  class Probe\n');
+    const r = spawnSync(mmdc, ['-i', probe, '-o', join(tmp, 'probe.svg')], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    mmdcRuns = r.status === 0;
+  }, 180_000);
+
+  const skipWithoutMmdc = (ctx: { skip: (note?: string) => void }): void => {
+    if (!mmdcRuns) ctx.skip('mmdc is not installed here, or cannot launch a browser');
+  };
+
+  test('-o out.svg writes an SVG and exits 0', (ctx) => {
+    skipWithoutMmdc(ctx);
+    const out = join(tmp, 'basic.svg');
+    const r = skiss(['render', file, '-o', out]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe('');
+    expect(readFileSync(out, 'utf8')).toContain('<svg');
+  }, 180_000);
+
+  test('-o out.png writes a PNG at the default scale of 2 and exits 0', (ctx) => {
+    skipWithoutMmdc(ctx);
+    const out = join(tmp, 'basic.png');
+    const r = skiss(['render', file, '-o', out]);
+    expect(r.status).toBe(0);
+    const bytes = readFileSync(out);
+    expect([...bytes.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    const small = join(tmp, 'basic-scale-1.png');
+    expect(skiss(['render', file, '-o', small, '--scale', '1']).status).toBe(0);
+    expect(readFileSync(small).length).toBeLessThan(bytes.length);
+  }, 180_000);
+
+  test('with no -o the SVG goes to standard output, and nothing else does', (ctx) => {
+    skipWithoutMmdc(ctx);
+    const r = skiss(['render', file]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/^<svg/);
+  }, 180_000);
+
+  test('mmdc not installed exits 2 with the one line that says how to get it', () => {
+    // An empty PATH and a working directory with no `node_modules/.bin` is
+    // the not-installed state, whether or not this machine has mmdc.
+    const r = spawnSync(process.execPath, [cli, 'render', file, '-o', join(tmp, 'none.svg')], {
+      cwd: tmp,
+      env: { ...process.env, PATH: '' },
+      encoding: 'utf8',
+    });
+    if (r.error) throw r.error;
+    expect(r.status).toBe(2);
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toBe(
+      'skiss render needs the Mermaid CLI: npm install -g @mermaid-js/mermaid-cli\n',
+    );
+  });
+
+  test('a format it cannot tell, or cannot write, exits 2 before mmdc is looked for', () => {
+    for (const args of [
+      ['render', file, '--format', 'pdf', '-o', join(tmp, 'x.pdf')],
+      ['render', file, '--format', 'png'],
+      ['render', file, '-o', join(tmp, 'x.txt')],
+      ['render', file, '--scale', 'large', '-o', join(tmp, 'x.png')],
+    ]) {
+      const r = skiss(args);
+      expect(r.status).toBe(2);
+      expect(r.stdout).toBe('');
+      expect(r.stderr).toContain("Try 'skiss --help'");
+    }
+  });
+
+  test('`render` without a file, or with an option it does not take, exits 2', () => {
+    expect(skiss(['render']).status).toBe(2);
+    expect(skiss(['render', '--json', file]).status).toBe(2);
+  });
+
+  test('`skiss --help` documents render and its options', () => {
+    const r = skiss(['--help']);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('render <file>');
+    expect(r.stdout).toContain('--format');
+    expect(r.stdout).toContain('--scale');
+  });
+
+  test('diagnostics reach standard error and --strict exits 1 without touching mmdc', () => {
+    // `broken.skiss` has diagnostics; with no mmdc reachable the exit code is
+    // the missing-CLI 2, so this checks the diagnostics alone.
+    const r = spawnSync(
+      process.execPath,
+      [
+        cli,
+        'render',
+        '--strict',
+        join(root, 'test', 'fixtures', 'broken.skiss'),
+        '-o',
+        join(tmp, 'b.svg'),
+      ],
+      { cwd: tmp, env: { ...process.env, PATH: '' }, encoding: 'utf8' },
+    );
+    if (r.error) throw r.error;
+    expect(r.stderr).toMatch(/^[^\n]*broken\.skiss:\d+:\d+: (error|warning) [EW]_[A-Z_]+ /);
+    expect(r.status).toBe(2);
+  });
+});
+
 describe('help, version and usage errors (AC5)', () => {
   test('`skiss --help` prints help to stdout and exits 0', () => {
     const r = skiss(['--help']);
