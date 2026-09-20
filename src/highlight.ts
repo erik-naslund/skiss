@@ -38,7 +38,7 @@ export type TokenKind =
   /** A lowercase word after `:` that is no primitive. The compiler warns; the colour does not. */
   | 'type'
   | 'enum'
-  /** The six operators of SPEC §4, and the `.` of a `= Class.field` join. */
+  /** The operators of SPEC §4, `<` included, and the `.` of a `= Class.field` join. */
   | 'operator'
   /** The `*` that marks the identifier. */
   | 'marker'
@@ -209,6 +209,7 @@ function headTokens(head: string, field: boolean): Token[] {
         i = nameToken(raws, i, tokens, 'system', SYSTEM_NAME);
         break;
       case '~':
+      case '<':
         tokens.push(token('operator', raw));
         i = nameToken(raws, i, tokens, 'class', CLASS_NAME);
         break;

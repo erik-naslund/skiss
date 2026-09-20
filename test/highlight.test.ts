@@ -29,6 +29,16 @@ describe('the line shapes of the SPEC', () => {
         'class(Character)',
       ],
     ],
+    [
+      'a class with a parent (SPEC §3.10)',
+      'Jedi < Character',
+      ['class(Jedi)', 'operator(<)', 'class(Character)'],
+    ],
+    [
+      'a parent and a system, in the order SPEC §4 fixes',
+      'Jedi < Character @Catalog',
+      ['class(Jedi)', 'operator(<)', 'class(Character)', 'operator(@)', 'system(Catalog)'],
+    ],
     ['a field with no type', '  name', ['field(name)']],
     ['the identifier', '  id*', ['field(id)', 'marker(*)']],
     ['a primitive', '  crewSize: int', ['field(crewSize)', 'operator(:)', 'primitive(int)']],
