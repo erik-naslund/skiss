@@ -274,7 +274,7 @@ describe('skiss import test/fixtures/broken.linkml.yaml (AC4)', () => {
       `${file}:13:20: warning W_UNDECLARED_CLASS class \`Ghost\` is not declared`,
       `${file}:16:24: warning W_UNDECLARED_FIELD class \`Person\` has no field \`fullName\``,
       `${file}:22:10: warning W_UNDECLARED_CLASS class \`Phantom\` is not declared`,
-      `${file}:27:3: warning W_REDUNDANT_OVERRIDE field \`name\` is identical to the one inherited from class \`Ship\` on line 3`,
+      `${file}:26:3: warning W_REDUNDANT_OVERRIDE field \`name\` is identical to the one inherited from class \`Ship\` on line 3`,
     ]);
   });
 

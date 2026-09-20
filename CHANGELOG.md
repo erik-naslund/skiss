@@ -18,8 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parent that is not declared is `W_UNDECLARED_CLASS` and a stub, as any
   reference is; a circle of `<` is `E_INHERITANCE_CYCLE` on the line that
   closes it, and that one `<` is not carried. It compiles to `is_a`, with a
-  replacing field under `slot_usage`, and draws as `Parent <|-- Child`.
-  `skiss import` reads both back, so `is_a` is no longer dropped.
+  replacing field as an attribute of the child, and draws as
+  `Parent <|-- Child`. `skiss import` reads both back, so `is_a` is no
+  longer dropped, and a `slot_usage` entry is still read as the field that
+  replaces one.
 
 ### Added
 

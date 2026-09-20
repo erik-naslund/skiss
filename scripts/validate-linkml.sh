@@ -16,7 +16,11 @@ Runs, on every $fixtures/*.linkml.yaml file:
   linkml-lint --ignore-warnings   metamodel validation; style warnings are
                                   reported but do not fail the gate
   gen-python                      into a temporary directory, proving the
-                                  schema is not merely well-formed but usable
+                                  schema is not merely well-formed but usable.
+                                  An `ERROR:` line on its standard error fails
+                                  the fixture even when it exits 0: LinkML logs
+                                  a schema it could not fully resolve and
+                                  generates anyway (issue #70)
 
 Uses .venv/ when present, otherwise whatever is on PATH. Run
 scripts/linkml-env.sh first. Exits non-zero if any fixture fails either step.
@@ -75,8 +79,20 @@ for schema in "${schemas[@]}"; do
     continue
   fi
 
-  if ! gen-python "$schema" >"$generated/${name//-/_}.py"; then
+  errors="$generated/${name//-/_}.stderr"
+  if ! gen-python "$schema" >"$generated/${name//-/_}.py" 2>"$errors"; then
+    cat "$errors" >&2
     echo "validate-linkml: gen-python failed for $name" >&2
+    failures=$((failures + 1))
+    continue
+  fi
+  cat "$errors" >&2
+
+  # gen-python exits 0 on a schema it could not fully resolve and says so on
+  # standard error instead. An ERROR: line is a failed gate, so a generator
+  # that stops understanding what Skiss writes cannot pass quietly.
+  if grep -q 'ERROR:' "$errors"; then
+    echo "validate-linkml: gen-python logged an error for $name" >&2
     failures=$((failures + 1))
   fi
 done

@@ -67,9 +67,8 @@ classes:
 
   Tug:
     is_a: Ship
-    slot_usage:
-      name: {}
     attributes:
+      name: {}
       towId: {}
 
   Barge:

@@ -161,13 +161,15 @@ describe('SPEC §5.1, what inheritance compiles to', () => {
   const source =
     'Book\n  isbn*\n  status: open|lost\nEbook < Book\n  fileSize: int\n  status: open|licensed\n';
 
-  test('`< Parent` is `is_a`, and a field that replaces an inherited one is `slot_usage`', () => {
+  test('`< Parent` is `is_a`, and a field that replaces an inherited one is an attribute', () => {
     const ebook = toLinkML(parse(source), { schemaName: 'library' }).classes?.Ebook;
     expect(ebook?.is_a).toBe('Book');
-    expect(Object.keys(ebook?.slot_usage ?? {})).toEqual(['status']);
-    expect(Object.keys(ebook?.attributes ?? {})).toEqual(['fileSize']);
+    // SPEC §5.1: the replacing field is an entry of the child's own
+    // `attributes`, in the order it was written, and no `slot_usage` is
+    // written at all.
+    expect(Object.keys(ebook?.attributes ?? {})).toEqual(['fileSize', 'status']);
     // SPEC §5.1: the key order of a class.
-    expect(Object.keys(ebook ?? {})).toEqual(['is_a', 'slot_usage', 'attributes']);
+    expect(Object.keys(ebook ?? {})).toEqual(['is_a', 'attributes']);
   });
 
   test('a parent that is not declared is the stub the reference leaves behind', () => {
@@ -213,6 +215,19 @@ describe('SPEC §8, reading inheritance back', () => {
     expect(fromLinkML(schema).source).toBe(
       'Book\n  isbn*\n  title\n\nEbook < Book\n  fileSize: int\n  title                                 # as the shop lists it\n',
     );
+  });
+
+  test('a child attribute that shadows an inherited slot is a field like any other', () => {
+    const shadowing = {
+      classes: {
+        Book: { attributes: { isbn: { identifier: true }, status: {} } },
+        Ebook: { is_a: 'Book', attributes: { status: { range: 'integer' } } },
+      },
+    };
+    expect(fromLinkML(shadowing).source).toBe(
+      'Book\n  isbn*\n  status\n\nEbook < Book\n  status: int\n',
+    );
+    expect(fromLinkML(shadowing).dropped).toEqual([]);
   });
 
   test('the entry is read alone, so only what it holds beyond a field is reported', () => {

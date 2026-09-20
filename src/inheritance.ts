@@ -1,11 +1,11 @@
-// The parent chain a `<` builds (SPEC §3.10), read once and shared.
+// The parent chain a `<` builds (SPEC §3.10), walked in one place.
 //
 // Inheritance is the one relation in the language that needs more than two
 // lines to understand: which fields a class has depends on its parent, whose
 // parent may be declared anywhere in the document, and a chain may close on
-// itself. `resolve` needs that view for its diagnostics and `toLinkML` needs
-// it to tell a field that replaces an inherited one from a field of its own,
-// so it lives here rather than twice.
+// itself. `resolve` needs that view for its diagnostics — an identifier a
+// class inherits, a field identical to the one it replaces, a chain that
+// closes on itself — so the walk lives here rather than inside `resolve`.
 //
 // Plain functions over the AST: nothing is stored on a node, nothing is
 // mutated, and a chain is always walked with a `seen` set, so this terminates
