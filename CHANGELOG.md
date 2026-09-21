@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-21
+
+A name outside ASCII gets a message that says so, and one bad class name is one diagnostic.
+
 ### Changed
 
 - **A message about a name says that names are ASCII and points at the
@@ -200,7 +204,8 @@ First release. Skiss to Mermaid. Published as `@eriknaslund/skiss`; the command 
 - The `skiss` command: `skiss diagram <file> [-o path] [--notes] [--strict]`,
   `-` for standard input, diagnostics on standard error.
 
-[Unreleased]: https://github.com/erik-naslund/skiss/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/erik-naslund/skiss/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/erik-naslund/skiss/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/erik-naslund/skiss/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/erik-naslund/skiss/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/erik-naslund/skiss/compare/v0.3.0...v0.4.0
