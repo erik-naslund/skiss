@@ -4,9 +4,10 @@
 // line is which class is current, so a field can attach to it and a field
 // with no current class can be reported as E_FIELD_WITHOUT_CLASS. No line
 // changes how another line is *read*; a line that fails to parse is skipped.
-// A failed class line clears the current class (ARCHITECTURE.md, diagnostics
-// table), so the fields under it are reported rather than silently attached
-// to the previous class.
+// A class line that failed after its name clears the current class
+// (ARCHITECTURE.md, diagnostics table), so the fields under it are reported
+// rather than silently attached to the previous class; one that failed *at*
+// its name is still a class line above them, and they are dropped with it.
 //
 // Nothing here throws. A line that does not match the grammar produces exactly
 // one diagnostic with severity `error` and is skipped.
@@ -38,6 +39,44 @@ export const SYSTEM_NAME = /^[A-Za-z][A-Za-z0-9_-]*$/;
 // `priority: 1|2|3` is an enum of three values (SPEC 0.2, issue #57).
 export const ENUM_VALUE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
+// SPEC §4: the letters and digits of those productions are ASCII. The
+// characters each one allows anywhere in a name, for the messages below.
+const NAME_CHAR = /^[A-Za-z0-9]$/;
+const WORD_CHAR = /^[A-Za-z0-9_-]$/;
+
+const CLASS_RULE = 'UpperCamelCase in ASCII letters and digits (A-Z, a-z, 0-9), uppercase first';
+const FIELD_RULE = 'lowerCamelCase in ASCII letters and digits (a-z, A-Z, 0-9), lowercase first';
+
+/**
+ * The last sentence of a message about a name: the first character outside
+ * `allowed`, or, when every character is in it, what the name starts with,
+ * which is then the whole fault — each production in SPEC §4 differs from its
+ * own character set in the first character alone. Issue #77: `förnamn` is
+ * lowercase in Swedish, so a message that names the case rule and stops reads
+ * as wrong when the real fault is the `ö`.
+ */
+function nameFault(text: string, allowed: RegExp): string {
+  // Whole code points: `for ... of` walks a surrogate pair as one character,
+  // so a message shows an astral character rather than half of it.
+  for (const ch of text) {
+    if (!allowed.test(ch)) return `\`${ch}\` is not one of them.`;
+  }
+  const first = text.slice(0, 1);
+  const kind = /[A-Z]/.test(first)
+    ? 'an uppercase letter'
+    : /[a-z]/.test(first)
+      ? 'a lowercase letter'
+      : /[0-9]/.test(first)
+        ? 'a digit'
+        : `\`${first}\``;
+  return `\`${text}\` starts with ${kind}.`;
+}
+
+/** The shape every message about a name has: the rule, the name, the fault. */
+function badName(rule: string, text: string, allowed: RegExp = NAME_CHAR): string {
+  return `${rule}: \`${text}\`. ${nameFault(text, allowed)}`;
+}
+
 /**
  * SPEC §3.2: the primitives and the aliases that name them. The one table;
  * `resolve` reads it for its type suggestions rather than keeping a second.
@@ -66,13 +105,20 @@ export function primitiveFor(word: string): Primitive | undefined {
   return Object.hasOwn(PRIMITIVES, word) ? PRIMITIVES[word] : undefined;
 }
 
+// The current class of a class line that failed at a name: not a class in the
+// document, and not `undefined` either, so the fields under it stay quiet
+// rather than each reporting E_FIELD_WITHOUT_CLASS (issue #77).
+const DROPPED = 'dropped-class' as const;
+
 const FIELD_ORDER = 'name, `*`, `: type`, `@System`, `= Class.field`, then `#` and `?`';
 const CLASS_ORDER = 'name, `< Parent`, `@System`, `~ Class`, then `#` and `?`';
 
 export function parse(source: string): Document {
   const classes: ClassNode[] = [];
   const diagnostics: Diagnostic[] = [];
-  let current: ClassNode | undefined;
+  // The class a field attaches to: a class in the document, `DROPPED` for a
+  // class line that failed at one of its names, or nothing before the first.
+  let current: ClassNode | typeof DROPPED | undefined;
 
   // A single leading U+FEFF is an editor's byte order mark, not content.
   // Stripping it keeps line 1 a class line and columns equal to what the
@@ -99,8 +145,10 @@ export function parse(source: string): Document {
         continue;
       }
       const result = parseFieldLine(text, line);
-      if (result.ok) current.fields.push(result.value);
-      else diagnostics.push(result.diagnostic);
+      // A field under a dropped class is still read on its own, so its own
+      // mistakes are still reported; it has nowhere to attach and is dropped.
+      if (!result.ok) diagnostics.push(result.diagnostic);
+      else if (current !== DROPPED) current.fields.push(result.value);
       continue;
     }
 
@@ -110,11 +158,13 @@ export function parse(source: string): Document {
         classes.push(result.value);
         current = result.value;
       } else {
-        // A failed class line clears the current class: the indented lines
-        // under it report E_FIELD_WITHOUT_CLASS until the next class line
-        // parses, instead of attaching to the previous class.
+        // A class line that failed at one of its names is still a class line
+        // above: the fields under it are dropped with it, silently (issue
+        // #77). One that failed elsewhere clears the current class, so its
+        // fields report E_FIELD_WITHOUT_CLASS rather than attaching to the
+        // class before it.
         diagnostics.push(result.diagnostic);
-        current = undefined;
+        current = result.atName ? DROPPED : undefined;
       }
       continue;
     }
@@ -269,17 +319,26 @@ const name = (t: Token, line: number): Name => ({ text: t.text, line, col: t.col
 // ---------------------------------------------------------------------------
 // Results. Errors are values, never exceptions.
 
-type Result<T> = { ok: true; value: T } | { ok: false; diagnostic: Diagnostic };
+type Result<T> =
+  | { ok: true; value: T }
+  // `atName` marks a line that failed at a name it had to read: the class's
+  // own name, the class after `~`, the class after `<`. A class line that
+  // failed there still counts as a class line above the fields under it, so
+  // they are dropped with it instead of each reporting E_FIELD_WITHOUT_CLASS:
+  // one mistake, one diagnostic (issue #77). Ignored on a field line.
+  | { ok: false; diagnostic: Diagnostic; atName: boolean };
 
 function fail<T>(
   code: DiagnosticCode,
   message: string,
   line: number,
   span: { col: number; end: number },
+  atName = false,
 ): Result<T> {
   return {
     ok: false,
     diagnostic: { severity: 'error', code, message, line, col: span.col, end: span.end },
+    atName,
   };
 }
 
@@ -295,17 +354,21 @@ function parseClassLine(text: string, line: number): Result<ClassNode> {
 
   const head = take(c);
   if (head === undefined || head.kind !== 'word') {
-    return fail('E_UNPARSABLE', 'A class line must start with a class name', line, {
-      col: 0,
-      end: Math.max(1, trailer.head.length),
-    });
+    return fail(
+      'E_UNPARSABLE',
+      'A class line must start with a class name',
+      line,
+      { col: 0, end: Math.max(1, trailer.head.length) },
+      true,
+    );
   }
   if (!CLASS_NAME.test(head.text)) {
     return fail(
       'E_BAD_NAME',
-      `Class names are UpperCamelCase (letters and digits, uppercase first): \`${head.text}\``,
+      badName(`Class names are ${CLASS_RULE}`, head.text),
       line,
       head,
+      true,
     );
   }
   const node: Omit<ClassNode, 'fields'> = { name: name(head, line), line };
@@ -342,9 +405,10 @@ function parseClassLine(text: string, line: number): Result<ClassNode> {
     if (!CLASS_NAME.test(target.text)) {
       return fail(
         'E_BAD_NAME',
-        `The class after \`~\` must be UpperCamelCase: \`${target.text}\``,
+        badName(`The class after \`~\` must be ${CLASS_RULE}`, target.text),
         line,
         target,
+        true,
       );
     }
     node.similarTo = name(target, line);
@@ -379,12 +443,7 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
   }
   if (head.kind !== 'word') return unexpected(head, line, 'field', FIELD_ORDER);
   if (!FIELD_NAME.test(head.text)) {
-    return fail(
-      'E_BAD_NAME',
-      `Field names are lowerCamelCase (letters and digits, lowercase first): \`${head.text}\``,
-      line,
-      head,
-    );
+    return fail('E_BAD_NAME', badName(`Field names are ${FIELD_RULE}`, head.text), line, head);
   }
   const node: FieldNode = { name: name(head, line), line, identifier: false };
 
@@ -427,7 +486,7 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
     if (!CLASS_NAME.test(className.text)) {
       return fail(
         'E_BAD_NAME',
-        `The class after \`=\` must be UpperCamelCase: \`${className.text}\``,
+        badName(`The class after \`=\` must be ${CLASS_RULE}`, className.text),
         line,
         className,
       );
@@ -453,7 +512,7 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
     if (!FIELD_NAME.test(fieldName.text)) {
       return fail(
         'E_BAD_NAME',
-        `The field after \`= ${className.text}.\` must be lowerCamelCase: \`${fieldName.text}\``,
+        badName(`The field after \`= ${className.text}.\` must be ${FIELD_RULE}`, fieldName.text),
         line,
         fieldName,
       );
@@ -485,8 +544,8 @@ function parseParent(c: Cursor, lt: Token): Result<Name> {
     // worth naming: `Jedi < int` is a type where a class has to be.
     const message = Object.hasOwn(PRIMITIVES, parent.text)
       ? `\`${parent.text}\` is a primitive, not a class; a parent is a class`
-      : `The class after \`<\` must be UpperCamelCase: \`${parent.text}\``;
-    return fail('E_BAD_NAME', message, c.line, parent);
+      : badName(`The class after \`<\` must be ${CLASS_RULE}`, parent.text);
+    return fail('E_BAD_NAME', message, c.line, parent, true);
   }
   // SPEC §3.10: one parent. `A < B, C` is a list, and there is no list here.
   const next = peek(c);
@@ -515,7 +574,11 @@ function parseSystem(c: Cursor, at: Token): Result<Name> {
   if (!SYSTEM_NAME.test(system.text)) {
     return fail(
       'E_UNPARSABLE',
-      `A system name is letters, digits, \`-\` and \`_\`, starting with a letter: \`${system.text}\``,
+      badName(
+        'A system name is ASCII letters, digits, `-` and `_` (A-Z, a-z, 0-9), starting with a letter',
+        system.text,
+        WORD_CHAR,
+      ),
       c.line,
       system,
     );
@@ -579,7 +642,11 @@ function parseType(c: Cursor, colon: Token): Result<TypeRef> {
       if (!ENUM_VALUE.test(w.text)) {
         return fail(
           'E_UNPARSABLE',
-          `An enum value is letters, digits, \`-\` and \`_\`, and does not start with \`-\` or \`_\`: \`${w.text}\``,
+          badName(
+            'An enum value is ASCII letters, digits, `-` and `_` (A-Z, a-z, 0-9), and does not start with `-` or `_`',
+            w.text,
+            WORD_CHAR,
+          ),
           c.line,
           w,
         );
@@ -600,7 +667,7 @@ function parseType(c: Cursor, colon: Token): Result<TypeRef> {
     if (!CLASS_NAME.test(word)) {
       return fail(
         'E_BAD_NAME',
-        `A referenced class must be UpperCamelCase: \`${word}\``,
+        badName(`A referenced class must be ${CLASS_RULE}`, word),
         c.line,
         first,
       );

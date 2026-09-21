@@ -151,10 +151,10 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 | Code | Severity | Trigger |
 |---|---|---|
 | `E_UNPARSABLE` | error | The line matches no production. |
-| `E_FIELD_WITHOUT_CLASS` | error | An indented line with no current class: before any class line, or after a class line that failed to parse. A failed class line clears the current class so its fields are not silently attached to the previous one. |
+| `E_FIELD_WITHOUT_CLASS` | error | An indented line with no current class: before any class line, or after a class line that failed somewhere other than at a name. Such a line clears the current class, so its fields are not silently attached to the previous one. A class line that failed *at* a name — its own, the one after `~`, the one after `<` — is still a class line above its fields: they are dropped with it and report nothing, so one bad name is one diagnostic. |
 | `E_MISSING_TYPE` | error | A colon with nothing after it. |
 | `E_UNCLOSED_MANY` | error | `[` without `]`. |
-| `E_BAD_NAME` | error | A class name not in UpperCamelCase, or a field name not in lowerCamelCase. A parent that is a primitive is this too, with a message naming it. |
+| `E_BAD_NAME` | error | A class name not in UpperCamelCase, or a field name not in lowerCamelCase. Names are ASCII (SPEC §4), so the message names the first character outside the set, or what the name starts with when every character is in it. A parent that is a primitive is this too, with a message naming it. |
 | `E_INHERITANCE_CYCLE` | error | A `<` that closes a circle, on the last of the circle's classes to be declared. From `resolve`; the `<` is cleared and nothing else changes. |
 | `W_UNKNOWN_TYPE` | warning | Lowercase type that is not a primitive and has no `\|`. Falls back to string. Suggests a primitive when the edit distance is small. |
 | `W_UNDECLARED_CLASS` | warning | `: X`, `~ X` or `= X.f` where X is not declared. Suggests the primitive when X is one written with a capital. |

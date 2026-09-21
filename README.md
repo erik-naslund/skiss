@@ -43,6 +43,7 @@ Skiss is text you can type while someone talks. A field is one line. A change is
 - **`~` and `=` are two different statements.** `~` says two classes are about the same thing. `=` says which field joins to which. The first is a domain conversation, the second an integration conversation.
 - **`<` inherits, once.** `Jedi < Character` on the class line: the child has everything the parent has and adds its own. One parent, no mixins; it compiles to `is_a`.
 - **`#` describes, `?` doubts.** A description ends up in generated documentation. A doubt never does.
+- **Names are ASCII.** `A`–`Z`, `a`–`z`, `0`–`9`, and nothing else: a name becomes an identifier and a URI in LinkML, a class in generated Python, a node in a diagram, and none of those take the rest of the alphabet. The words of the domain, in whatever alphabet they are spoken, go in the `#` description ([SPEC §4](docs/SPEC.md#4-grammar)).
 - **Every line stands on its own.** A half-typed line breaks that line and nothing else, so the diagram keeps rendering while you type.
 - **Everything you can write compiles to valid LinkML.** Skiss is a strict subset. Nothing is lost on the way up.
 
@@ -91,7 +92,7 @@ Editors that render Skiss live are separate projects built on this package. This
 
 0.6.0, published on npm as [`@eriknaslund/skiss`](https://www.npmjs.com/package/@eriknaslund/skiss). The language parses, resolves and diagnoses; `skiss diagram` draws it, `skiss compile` writes LinkML that the real LinkML toolchain validates in CI, and `skiss import` reads a LinkML schema back into a sketch. The library exports the same in both directions and is browser-safe.
 
-The [specification](docs/SPEC.md) is at 0.3 and moves when the language does, which is not with every release. Not built: editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
+The [specification](docs/SPEC.md) is at 0.3.1 and moves when the language does, which is not with every release. Not built: editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
 
 ## License
 

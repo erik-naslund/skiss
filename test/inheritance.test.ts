@@ -66,7 +66,8 @@ describe('SPEC §3.10, the class line', () => {
     });
     expect(first('Jedi < padawan\n')).toMatchObject({
       code: 'E_BAD_NAME',
-      message: 'The class after `<` must be UpperCamelCase: `padawan`',
+      message:
+        'The class after `<` must be UpperCamelCase in ASCII letters and digits (A-Z, a-z, 0-9), uppercase first: `padawan`. `padawan` starts with a lowercase letter.',
     });
   });
 
