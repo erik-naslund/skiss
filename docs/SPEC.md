@@ -2,7 +2,7 @@
 
 **Specification, version 0.3.1**
 
-*Applies to skiss 0.5.0.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
+*Applies to skiss 0.6.1.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
 
 A notation for sketching data models. It compiles to LinkML. The reasoning behind the rules is in [DESIGN.md](DESIGN.md); this document only says what the language is.
 
