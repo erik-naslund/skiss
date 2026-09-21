@@ -25,7 +25,7 @@ Person @Crew
   HomePort
   ships: Ship[]
 
-# E_BAD_NAME: a class name that is not UpperCamelCase
+# E_BAD_NAME: a class name that is not UpperCamelCase, and the fields under it drop with it
 port @Registry
   id*
   name

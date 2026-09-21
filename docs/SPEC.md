@@ -1,6 +1,6 @@
 # Skiss
 
-**Specification, version 0.3**
+**Specification, version 0.3.1**
 
 *Applies to skiss 0.5.0.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
 
@@ -215,7 +215,14 @@ field-name   = lowercase-letter { letter | digit } ;
 System       = letter { letter | digit | "-" | "_" } ;
 value        = ( letter | digit ) { letter | digit | "-" | "_" } ;
 WS           = one or more spaces or tabs ;
+
+uppercase-letter = "A" … "Z" ;                             (* ASCII *)
+lowercase-letter = "a" … "z" ;                             (* ASCII *)
+letter       = uppercase-letter | lowercase-letter ;
+digit        = "0" … "9" ;
 ```
+
+**Names are ASCII.** A letter is an ASCII letter and a digit an ASCII digit, in every name the language has: a class name, a field name, a system name and an enum value. A name is an identifier everywhere it goes — a LinkML class or slot, part of the schema's URI, a generated Python class, a node in a diagram — and those do not take the rest of the alphabet, so `Beställning` is not a class name and `förnamn` is not a field name. The words of the domain, in whatever alphabet they are spoken, go in the `#` description of the thing they name (§3.9).
 
 Modifier order is fixed as written, on a class line and on a field line alike.
 

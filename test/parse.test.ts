@@ -63,3 +63,79 @@ describe('a numeric enum value (SPEC §3.4)', () => {
     expect(parse('Task\n  priority: 1\n').diagnostics[0]?.code).toBe('E_UNPARSABLE');
   });
 });
+
+// Issue #77: SPEC §4's letters and digits are ASCII. `förnamn` is lowercase in
+// Swedish, so a message that names the case rule and stops reads as wrong; and
+// one bad class name used to be as many diagnostics as the class had fields.
+describe('a name outside ASCII (SPEC §4, issue #77)', () => {
+  const first = (source: string) => parse(source).diagnostics[0];
+  const codes = (source: string) => parse(source).diagnostics.map((d) => d.code);
+
+  test('a field name is reported with the first character outside the set', () => {
+    expect(first('Kund\n  förnamn\n')).toMatchObject({
+      code: 'E_BAD_NAME',
+      message:
+        'Field names are lowerCamelCase in ASCII letters and digits (a-z, A-Z, 0-9), lowercase first: `förnamn`. `ö` is not one of them.',
+    });
+  });
+
+  test('a class name is reported with the first character outside the set', () => {
+    expect(first('Beställning\n  id*\n')).toMatchObject({
+      code: 'E_BAD_NAME',
+      message:
+        'Class names are UpperCamelCase in ASCII letters and digits (A-Z, a-z, 0-9), uppercase first: `Beställning`. `ä` is not one of them.',
+    });
+  });
+
+  test('a field name of ASCII letters in the wrong case is reported by its first letter', () => {
+    expect(first('Kund\n  Fornamn\n')?.message).toBe(
+      'Field names are lowerCamelCase in ASCII letters and digits (a-z, A-Z, 0-9), lowercase first: `Fornamn`. `Fornamn` starts with an uppercase letter.',
+    );
+  });
+
+  test('a class name of ASCII letters in the wrong case is reported by its first letter', () => {
+    expect(first('namn\n  id*\n')?.message).toBe(
+      'Class names are UpperCamelCase in ASCII letters and digits (A-Z, a-z, 0-9), uppercase first: `namn`. `namn` starts with a lowercase letter.',
+    );
+  });
+
+  test('a name that is both is reported by its character, which is the rule it breaks first', () => {
+    expect(first('Kund\n  Förnamn\n')?.message).toContain('`ö` is not one of them.');
+  });
+
+  test('an `@System` name names the character too, and still says it starts with a letter', () => {
+    const d = first('Order @Ekonomí\n');
+    expect(d?.code).toBe('E_UNPARSABLE');
+    expect(d?.message).toBe(
+      'A system name is ASCII letters, digits, `-` and `_` (A-Z, a-z, 0-9), starting with a letter: `Ekonomí`. `í` is not one of them.',
+    );
+  });
+
+  test('an enum value names the character too', () => {
+    const d = first('Order\n  status: påbörjad|klar\n');
+    expect(d?.code).toBe('E_UNPARSABLE');
+    expect(d?.message).toBe(
+      'An enum value is ASCII letters, digits, `-` and `_` (A-Z, a-z, 0-9), and does not start with `-` or `_`: `påbörjad`. `å` is not one of them.',
+    );
+  });
+
+  test('a class with a bad name and three fields yields exactly one diagnostic', () => {
+    const doc = parse('Beställning\n  id*\n  belopp: int\n  skapad: date\n');
+    expect(doc.diagnostics.map((d) => d.code)).toEqual(['E_BAD_NAME']);
+    // The class is not in the document, and its fields went with it.
+    expect(doc.classes).toEqual([]);
+  });
+
+  test('the class after `~` and the class after `<` stop the cascade as well', () => {
+    expect(codes('Kundvy ~ Beställning\n  id*\n')).toEqual(['E_BAD_NAME']);
+    expect(codes('Order < Beställning\n  id*\n')).toEqual(['E_BAD_NAME']);
+  });
+
+  test('a field under a dropped class is still read, so its own mistakes are reported', () => {
+    expect(codes('Beställning\n  Fornamn\n  id*\n')).toEqual(['E_BAD_NAME', 'E_BAD_NAME']);
+  });
+
+  test('a class line that fails after its name still reports the fields under it', () => {
+    expect(codes('Order @Ekonomí\n  id*\n')).toEqual(['E_UNPARSABLE', 'E_FIELD_WITHOUT_CLASS']);
+  });
+});

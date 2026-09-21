@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A message about a name says that names are ASCII and points at the
+  character that is not.** `förnamn` is lowercase in Swedish, so
+  "Field names are lowerCamelCase" and nothing else read as wrong. The
+  message now names the first character outside `A`–`Z`, `a`–`z`, `0`–`9`,
+  and for a name that is all ASCII says what the name starts with instead.
+  Every name the language has: a class, a field, the class after `~`, `<`
+  and `=`, a referenced class, an `@System` name and an enum value. The rule
+  itself is unchanged.
+- **A bad class name is one diagnostic, not one per field.** A class line
+  that fails at a name — its own, the one after `~`, the one after `<` — is
+  still a class line above the fields under it: they are dropped with the
+  class and no longer report `E_FIELD_WITHOUT_CLASS` each. A class line that
+  fails elsewhere clears the current class as before. A field under a dropped
+  class is still read on its own, so its own mistakes are still reported.
+- **The specification is at 0.3.1**, a wording change and no language change:
+  §4 now writes out what `letter` and `digit` always meant — ASCII — and says
+  why, which is that a name becomes an identifier and a URI downstream, while
+  the words of the domain belong in the `#` description.
+
 ## [0.6.0] - 2026-09-20
 
 The line tokeniser is in the library, so every editor colours Skiss the same way.
