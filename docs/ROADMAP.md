@@ -32,12 +32,16 @@ Read an existing LinkML schema and project it into Skiss (SPEC §8), reporting w
 
 Done: `toSkiss`, `fromLinkML`, `importLinkML` and the `skiss import` command. The release itself is its own PR.
 
-## Milestone 4: Pictures, then inheritance (0.5.0)
+## Milestone 4: Pictures, then inheritance — done, 0.5.0
 
 What workshop use asked for first. In order:
 
-1. **`skiss render`** ([#63](https://github.com/erik-naslund/skiss/issues/63)): an SVG or a PNG from a sketch, through the Mermaid CLI when it is installed. The library stays browser-safe; the command delegates.
-2. **Inheritance with `<`** ([#64](https://github.com/erik-naslund/skiss/issues/64)): a SPEC 0.3 decision first, then the parser, both generators, the import (`is_a`) and the printer. The most common thing the LinkML import drops today.
+1. ~~**`skiss render`** ([#63](https://github.com/erik-naslund/skiss/issues/63)): an SVG or a PNG from a sketch, through the Mermaid CLI when it is installed. The library stays browser-safe; the command delegates.~~
+2. ~~**Inheritance with `<`** ([#64](https://github.com/erik-naslund/skiss/issues/64)): a SPEC 0.3 decision first, then the parser, both generators, the import (`is_a`) and the printer. The most common thing the LinkML import drops today.~~
+
+## Milestone 5: One highlighter — done, 0.6.0
+
+~~**`tokenizeLine` in the library** ([#73](https://github.com/erik-naslund/skiss/issues/73), [ADR 0010](adr/0010-tokeniser-in-the-package.md)): the line tokeniser the Obsidian plugin wrote for itself moves into the package, so the plugin and the playground colour a sketch the same way and a SPEC change reaches both through one bump.~~
 
 ## Later, unscheduled
 
@@ -47,7 +51,10 @@ What workshop use asked for first. In order:
 
 ## Not in this repository
 
-Live editors and plugins that render Skiss while you type are separate projects built on the `skiss` package. They have their own roadmaps.
+Live editors and plugins that render Skiss while you type are separate projects built on the `skiss` package.
 
-- The Obsidian plugin: [obsidian-skiss](https://github.com/erik-naslund/obsidian-skiss).
-- A web editor with a live split pane, hosted on GitHub Pages: scoped in [#65](https://github.com/erik-naslund/skiss/issues/65), to get its own repository when milestone 4 step 1 is done.
+- **The Obsidian plugin**: [obsidian-skiss](https://github.com/erik-naslund/obsidian-skiss), in the community directory, with its own roadmap.
+- **The playground**: [skiss-playground](https://github.com/erik-naslund/skiss-playground), live at <https://erik-naslund.github.io/skiss-playground/>. Version one ([#65](https://github.com/erik-naslund/skiss/issues/65)) is done: an editor with the same colours as the plugin, the diagram drawn as you type with pan and zoom, share links that carry the sketch in the URL and nowhere else, copy as Mermaid or LinkML, SVG and PNG downloads, and files opened and saved, a LinkML schema included. Its roadmap lives here:
+  1. **A title for the sketch**, in the header, the link and the file names ([skiss-playground #9](https://github.com/erik-naslund/skiss-playground/issues/9)).
+  2. **Excalidraw as the renderer**, on the same principles as Mermaid today: the text is the source, the drawing follows it, and box positions are remembered so a moved box stays where it was put.
+  3. **Live collaboration**: several people editing one sketch at once in the playground, which is the first thing that would need something other than a static page. Unscheduled until a workshop asks for it.

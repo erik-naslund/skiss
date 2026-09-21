@@ -73,7 +73,7 @@ Or without installing: `npx @eriknaslund/skiss diagram model.skiss`.
 
 `tokenizeLine` is there for editors: it says where the words of one line are — `{ kind, from, to }` for each run of characters, so a host can colour them. It is line-based and stateless, as the language is: one line in, its tokens out, nothing carried from the line before, and nothing said about a run it does not recognise, so a half-typed line keeps the colours it has earned. It is not a parser and reports nothing; diagnostics stay `parse` and `resolve`'s ([ADR 0010](docs/adr/0010-tokeniser-in-the-package.md)).
 
-Editors that render Skiss live are separate projects built on this package. This repository is the language, the library and the command line.
+Editors that render Skiss live are separate projects built on this package. This repository is the language, the library and the command line. To try the language without installing anything, open the [playground](https://erik-naslund.github.io/skiss-playground/): write a sketch, watch the diagram, share a link. Inside Obsidian, the [obsidian-skiss](https://github.com/erik-naslund/obsidian-skiss) plugin renders `skiss` code blocks in your notes.
 
 ## Where to look
 
