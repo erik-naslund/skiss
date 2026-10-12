@@ -48,7 +48,7 @@ classDiagram
     <<undeclared>>
   }
   Ship --> Person : captain
-  Person "1" --> "*" Ship : ships
+  Person --> Ship : ships
   Vessel ..> Ghost : similar
   Vessel ..> Ship : shipId = id
   Vessel ..> Person : captainName = fullName

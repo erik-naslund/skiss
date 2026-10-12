@@ -35,8 +35,8 @@ classDiagram
     +int editCount
   }
   Character --> Planet : homeworld
-  Character "1" --> "*" Film : films
-  Film "1" --> "*" Character : characters
-  Starship "1" --> "*" Character : pilots
+  Character --> Film : films
+  Film --> Character : characters
+  Starship --> Character : pilots
   CharacterPage ..> Character : similar
   CharacterPage ..> Character : characterId = id

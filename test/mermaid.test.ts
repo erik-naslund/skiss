@@ -110,6 +110,16 @@ describe('relations', () => {
     ]);
   });
 
+  test('issue #82: a `[]` relation carries no multiplicity labels', () => {
+    const lines = mmd('Session\n  host: Player\n  players: Player[]\nPlayer\n  id*\n');
+    expect(lines.filter((l) => l.includes(' --> '))).toEqual([
+      '  Session --> Player : host',
+      '  Session --> Player : players',
+    ]);
+    // The plural is still readable, on the member line.
+    expect(lines).toContain('    +Player[] players');
+  });
+
   test('D6: a self-reference is a normal relation', () => {
     expect(mmd('Node\n  parent: Node\n  children: Node[]\n')).toEqual([
       'classDiagram',
@@ -118,7 +128,7 @@ describe('relations', () => {
       '    +Node[] children',
       '  }',
       '  Node --> Node : parent',
-      '  Node "1" --> "*" Node : children',
+      '  Node --> Node : children',
       '',
     ]);
   });

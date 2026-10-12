@@ -67,7 +67,7 @@ The document is always invalid while someone types. A grammar with error recover
 |---|---|
 | Required / optional | Nobody knows at sketch time. The answer is always "required, obviously", followed by three exceptions. |
 | Inheritance | Genuinely useful, genuinely overused. A real model asked, so `Foo < Bar` is in the language (SPEC §3.10): one parent, and nothing else of LinkML's class hierarchy. |
-| Cardinality beyond `[]` | `[0..1]`, `[1..*]` is where a sketch turns into a spec. |
+| Cardinality beyond `[]` | `[0..1]`, `[1..*]` is where a sketch turns into a spec. The Mermaid diagram does not add one either: a `[]` relation draws without multiplicity labels (issue #82). |
 | Composite keys | Two `*` in a class could one day mean a LinkML `unique_keys` entry. Waiting for a real model to need it. |
 | Patterns, units, constraints | LinkML's job. |
 | Sync direction, freshness, read/write on `@` | This is where a domain picture quietly becomes an integration diagram. Hard line. |
