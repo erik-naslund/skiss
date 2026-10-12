@@ -41,4 +41,4 @@ export { parse } from './parse.ts';
 export { type ResolvedDocument, resolve } from './resolve.ts';
 export { type SerializeFormat, serialize } from './serialize.ts';
 
-export const VERSION = '0.6.1';
+export const VERSION = '0.7.0';
