@@ -25,6 +25,10 @@ CharacterPage @Community ~ Character    # the community wiki's version
 
 That is the whole language. Classes at column 0, fields indented under them, a handful of punctuation marks.
 
+**Try it live:** <https://erik-naslund.github.io/skiss-playground/> draws a sketch as you type, shares it as a link and exports SVG, PNG and LinkML. Nothing to install, nothing leaves your browser.
+
+**Let an assistant write it:** [`skills/skiss`](skills/skiss/SKILL.md) is an agent skill for Claude, a custom GPT or any assistant with a system prompt, so it writes valid Skiss and draws it, with or without the compiler at hand.
+
 ## Why
 
 You sit down with someone who knows the domain. Within the hour you want a shared picture of it: what the things are, what they are called, which system owns them, how they hang together.

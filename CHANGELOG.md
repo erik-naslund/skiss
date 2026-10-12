@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An agent skill**, `skills/skiss`: the language on one screen, the workflow an
+  assistant follows, and reference files with the exact Mermaid mapping, every
+  diagnostic code and worked examples, so Claude, a custom GPT or any assistant
+  with a system prompt writes valid Skiss and draws it. Every sketch and diagram
+  in it is compiled in CI, so the skill moves with the language.
+- README links the playground at the top.
+
 ### Changed
 
 - **A `[]` relation draws without multiplicity labels.** `players: Player[]`
