@@ -185,7 +185,7 @@ Checked against a real Mermaid parser. The three surprises are marked.
 | `@System` on a field | appended to the member: `+int popularityRank @Community` |
 | `< Parent` | `Parent <\|-- Child`, unlabelled and parent first. The parent's fields are not repeated in the child's box. |
 | `: OtherClass` | `A --> B : fieldName` |
-| `: OtherClass[]` | `A "1" --> "*" B : fieldName` |
+| `: OtherClass[]` | `A --> B : fieldName`, the same line as a single one. The plural is on the member line, as `+Film[] films`; the relation carries no multiplicity label, because `[]` says "plural" and not "one to many" (issue #82, DESIGN.md's cardinality row). |
 | `~ Other` | `A ..> B : similar`. **`~` is Mermaid's generic-type delimiter and vanishes from labels.** |
 | `= Other.field` | `A ..> B : fieldName = field` |
 | undeclared class | `class Name { <<undeclared>> }`, after the declared classes |
