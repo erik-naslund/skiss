@@ -47,10 +47,10 @@ classDiagram
     +available|licensed|expired status
   }
   Book --> Author : author
-  Author "1" --> "*" Book : books
+  Author --> Book : books
   Loan --> Book : book
   Loan --> Member : member
-  Member "1" --> "*" Loan : loans
+  Member --> Loan : loans
   BookListing ..> Book : similar
   BookListing ..> Book : bookIsbn = isbn
   Book <|-- Ebook

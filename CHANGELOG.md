@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in it is compiled in CI, so the skill moves with the language.
 - README links the playground at the top.
 
+### Changed
+
+- **A `[]` relation draws without multiplicity labels.** `players: Player[]`
+  used to draw as `Session "1" --> "*" Player : players`, which reads as a
+  one-to-many relation the sketch never stated — a session holds several
+  players and a player may be in many sessions. The relation is now
+  `Session --> Player : players`, the same line a single-valued field draws,
+  and the plural stays visible on the member line as `+Player[] players`. The
+  LinkML output is unchanged: `multivalued: true` as before.
+
 ## [0.6.1] - 2026-09-21
 
 A name outside ASCII gets a message that says so, and one bad class name is one diagnostic.

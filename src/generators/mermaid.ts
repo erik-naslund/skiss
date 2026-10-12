@@ -58,12 +58,13 @@ export function toMermaid(doc: Document, opts?: MermaidOptions): string {
     if (cls.similarTo !== undefined) lines.push(`  ${from} ..> ${cls.similarTo.text} : similar`);
     for (const field of cls.fields) {
       const type = field.type;
+      // Issue #82: a `[]` relation draws exactly like a single one. Skiss
+      // says "plural", not "one-to-many", and multiplicity labels would put
+      // a cardinality in the diagram that the sketch never stated
+      // (docs/DESIGN.md, the cardinality row). The plural stays readable on
+      // the member line, as `+Player[] players`.
       if (type?.kind === 'class') {
-        lines.push(
-          type.many
-            ? `  ${from} "1" --> "*" ${type.name.text} : ${field.name.text}`
-            : `  ${from} --> ${type.name.text} : ${field.name.text}`,
-        );
+        lines.push(`  ${from} --> ${type.name.text} : ${field.name.text}`);
       }
       if (field.joinsTo !== undefined) {
         const { className, fieldName } = field.joinsTo;
