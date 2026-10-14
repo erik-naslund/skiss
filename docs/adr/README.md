@@ -14,3 +14,4 @@ One file per decision, [MADR](https://adr.github.io/madr/) format: context, deci
 | [0008](0008-explicit-identifier.md) | `*` is the only identifier marker, one per class | Accepted |
 | [0009](0009-scoped-npm-package.md) | The npm package is `@eriknaslund/skiss`; the command stays `skiss` | Accepted |
 | [0010](0010-tokeniser-in-the-package.md) | The line tokeniser lives in the package, not in each editor | Accepted |
+| [0011](0011-tech-lead-tags-releases.md) | The tech lead tags releases; the release PR is the brake | Accepted |
