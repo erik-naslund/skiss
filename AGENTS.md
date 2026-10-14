@@ -293,5 +293,10 @@ of contact.
    Workers report through their PR; the tech lead reviews (itself or via
    a spawned reviewer, per Section 12.2) and handles merge, publish and
    follow-ups.
-5. **Everything else in this contract binds workers unchanged.** This
+5. **The tech lead tags releases.** After merging a release PR, the tech
+   lead pushes the tag and confirms the release run ([ADR-0011](docs/adr/0011-tech-lead-tags-releases.md)).
+   Holding a release means not merging the release PR. Workers never tag;
+   account-level actions (npm and GitHub settings, directory submissions)
+   stay the product owner's.
+6. **Everything else in this contract binds workers unchanged.** This
    section only fixes who starts whom and where decisions live.
