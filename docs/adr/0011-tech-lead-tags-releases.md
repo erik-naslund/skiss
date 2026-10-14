@@ -21,7 +21,7 @@ Both reasons have since gone. Publishing uses trusted publishing with GitHub's o
 
 - Releases are one message shorter and one copy-paste safer.
 - Account-level actions stay the product owner's: npm and GitHub settings, the community directory, anything that needs a login the agents do not have.
-- If the tech lead's environment refuses a tag push, the fallback is the old procedure: the exact commands, from the right folder, in one message.
+- If the tech lead's environment refuses a tag push, the fallback is the old procedure: the exact commands, from the right folder, in one message. As of 2026-10-14 the cloud session's git proxy answers a tag push with HTTP 403 (branch pushes go through), so the fallback is in effect; the tech lead tries the push once per release and does not retry a 403.
 
 ## Alternatives considered
 
