@@ -1,6 +1,6 @@
 # Examples
 
-Three sketches of the kind a domain conversation produces, each valid as written.
+Four sketches of the kind a domain conversation produces, each valid as written.
 
 ## A booking, first pass
 
@@ -99,4 +99,67 @@ classDiagram
   }
   Product <|-- DigitalProduct
   Product <|-- PhysicalProduct
+```
+
+## Definitions in the sketch
+
+The comment block at the top describes the whole sketch, and an indented `#`
+or `?` line continues the class or field above it, so a definition does not
+have to fit beside the thing it defines.
+
+```skiss
+# The content calendar, as the editors describe it.
+# The words here are the ones used in the Monday meeting.
+
+Campaign @Marketing
+    # A run of posts with one message, bought as one budget line.
+    ? does a campaign ever span two budgets
+    id*
+    name
+    runsFrom: date
+    runsUntil: date
+    posts: Post[]
+
+Post @Marketing
+    # One thing published once, on one channel.
+    id*
+    channel: web|email|social
+    publishedAt: datetime       # when it went out,
+        # not when it was written
+        ? which time zone the editors mean
+```
+
+```mermaid
+classDiagram
+  class Campaign {
+    <<Marketing>>
+    *id
+    +name
+    +date runsFrom
+    +date runsUntil
+    +Post[] posts
+  }
+  class Post {
+    <<Marketing>>
+    *id
+    +web|email|social channel
+    +datetime publishedAt
+  }
+  note for Campaign "does a campaign ever span two budgets"
+  note for Post "publishedAt: which time zone the editors mean"
+  Campaign --> Post : posts
+```
+
+`skiss glossary calendar.skiss --classes --name "The content calendar"` turns
+the same sketch into the terminology page:
+
+```markdown
+# The content calendar
+
+The content calendar, as the editors describe it. The words here are the ones used in the Monday meeting.
+
+| Term | Definition |
+|---|---|
+| Campaign | System: Marketing. A run of posts with one message, bought as one budget line. |
+| Post | System: Marketing. One thing published once, on one channel. |
 ```

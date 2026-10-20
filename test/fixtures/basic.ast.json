@@ -434,23 +434,23 @@
           },
           "line": 28,
           "identifier": false,
-          "description": "free text, written by editors"
+          "description": "free text, written by editors, one paragraph and no markup"
         },
         {
           "name": {
             "text": "editCount",
-            "line": 29,
+            "line": 30,
             "col": 2,
             "end": 11
           },
-          "line": 29,
+          "line": 30,
           "identifier": false,
           "type": {
             "kind": "primitive",
             "name": "int",
             "written": {
               "text": "int",
-              "line": 29,
+              "line": 30,
               "col": 13,
               "end": 16
             },

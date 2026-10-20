@@ -14,6 +14,7 @@ export {
   type CompileOptions,
   type CompileResult,
   compile,
+  type GlossaryCompileOptions,
   type LinkMLCompileOptions,
   type MermaidCompileOptions,
 } from './compile.ts';
@@ -24,6 +25,7 @@ export {
   formatDropped,
   fromLinkML,
 } from './generators/from-linkml.ts';
+export { type GlossaryOptions, toGlossary } from './generators/glossary.ts';
 export {
   type LinkMLAnnotations,
   type LinkMLAttribute,

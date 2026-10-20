@@ -38,10 +38,12 @@ export function toMermaid(doc: Document, opts?: MermaidOptions): string {
 
   if (notes) {
     for (const cls of resolved.classes) {
-      if (cls.note !== undefined) lines.push(`  note for ${cls.name.text} ${quote(cls.note)}`);
+      for (const doubt of doubts(cls.note)) {
+        lines.push(`  note for ${cls.name.text} ${quote(doubt)}`);
+      }
       for (const field of cls.fields) {
-        if (field.note !== undefined) {
-          lines.push(`  note for ${cls.name.text} ${quote(`${field.name.text}: ${field.note}`)}`);
+        for (const doubt of doubts(field.note)) {
+          lines.push(`  note for ${cls.name.text} ${quote(`${field.name.text}: ${doubt}`)}`);
         }
       }
     }
@@ -104,6 +106,12 @@ function typeText(type: TypeRef): string {
   }
   return type.many ? `${text}[]` : text;
 }
+
+// SPEC §3.9: the doubts of one element are the lines of its note, one open
+// question each, so each one is drawn as a note of its own. A Mermaid note is
+// one line, which is the other reason they are never joined here.
+const doubts = (note: string | undefined): string[] =>
+  note === undefined ? [] : note.split('\n').filter((line) => line !== '');
 
 // A note is a double-quoted Mermaid string, so a double quote inside the
 // doubt becomes a single quote (issue #5, AC4).

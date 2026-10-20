@@ -16,7 +16,7 @@ describe('spec-example.skiss (SPEC §5.3)', () => {
   });
 });
 
-describe.each(['basic', 'systems', 'broken'])('%s.skiss', (name) => {
+describe.each(['basic', 'systems', 'broken', 'glossary'])('%s.skiss', (name) => {
   const schema = (): ReturnType<typeof toLinkML> =>
     toLinkML(parse(fixture(`${name}.skiss`)), { schemaName: name });
 

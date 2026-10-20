@@ -18,10 +18,16 @@ import type { ClassNode, Document, FieldNode, TypeRef } from '../ast.ts';
 const TRAILER_COLUMN = 40;
 
 export function toSkiss(doc: Document): string {
-  // A document with no classes is the empty string, not a blank line: the
-  // format has no leading or trailing blank lines, so there is nothing left.
-  if (doc.classes.length === 0) return '';
-  return `${doc.classes.map(classBlock).join('\n\n')}\n`;
+  // SPEC §3.1: the document description is one comment line at the top,
+  // whatever it was written on, and the only column-0 comment a document
+  // holds. A document with nothing else in it is that line alone; one with
+  // nothing at all is the empty string, not a blank line, because the format
+  // has no leading or trailing blank lines.
+  const description = doc.description;
+  const blocks = description === undefined || description === '' ? [] : [`# ${description}`];
+  for (const cls of doc.classes) blocks.push(classBlock(cls));
+  if (blocks.length === 0) return '';
+  return `${blocks.join('\n\n')}\n`;
 }
 
 // SPEC §2: the class line, then its fields at a two-space indent.
@@ -31,8 +37,24 @@ function classBlock(cls: ClassNode): string {
     (cls.parent === undefined ? '' : ` < ${cls.parent.text}`) +
     (cls.system === undefined ? '' : ` @${cls.system.text}`) +
     (cls.similarTo === undefined ? '' : ` ~ ${cls.similarTo.text}`);
-  return [withTrailer(head, cls), ...cls.fields.map(fieldLine)].join('\n');
+  const lines = [withTrailer(head, cls), ...doubtLines(cls.note, '  ')];
+  for (const field of cls.fields) lines.push(fieldLine(field), ...doubtLines(field.note, '    '));
+  return lines.join('\n');
 }
+
+/**
+ * SPEC §3.9: the doubts of one element, one open question each. The first
+ * goes on the element's own line and the rest on continuation lines under
+ * it, indented past the element, which is the one layout that writes them
+ * all without joining two questions into one sentence.
+ */
+const doubtsOf = (note: string | undefined): string[] =>
+  note === undefined ? [] : note.split('\n').filter((doubt) => doubt !== '');
+
+const doubtLines = (note: string | undefined, indent: string): string[] =>
+  doubtsOf(note)
+    .slice(1)
+    .map((doubt) => `${indent}? ${doubt}`);
 
 // SPEC §4: the modifier order is fixed, so the printer has no choices to make.
 function fieldLine(field: FieldNode): string {
@@ -105,6 +127,11 @@ export const rewordsDescription = (text: string): boolean => writeDescription(te
  * starts at `TRAILER_COLUMN`, or two spaces after the line when the line is
  * already that long, so there is always whitespace before the marker for
  * `parse` to delimit on.
+ *
+ * The whole description goes here, however many lines it was written on
+ * (issue #90, working default): continuation is an input convenience and the
+ * canonical form is one layout. The second and later doubts cannot go here —
+ * a doubt runs to the end of the line — and are written by `doubtLines`.
  */
 function withTrailer(head: string, node: { description?: string; note?: string }): string {
   const parts: string[] = [];
@@ -113,7 +140,8 @@ function withTrailer(head: string, node: { description?: string; note?: string }
   // a round trip.
   if (node.description !== undefined && node.description !== '')
     parts.push(writeDescription(node.description));
-  if (node.note !== undefined && node.note !== '') parts.push(`? ${node.note}`);
+  const [doubt] = doubtsOf(node.note);
+  if (doubt !== undefined) parts.push(`? ${doubt}`);
   if (parts.length === 0) return head;
   const gap = head.length < TRAILER_COLUMN - 1 ? ' '.repeat(TRAILER_COLUMN - head.length) : '  ';
   return head + gap + parts.join(' ');

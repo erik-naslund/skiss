@@ -28,8 +28,9 @@ exercise the corners `basic` does not: a field that names its own
 enum, an enum of numeric values (`rating`), which reaches LinkML as quoted
 permissible values, a class with no identifier, a description and a doubt on class lines,
 a description whose text contains a `?` followed by a real doubt, a field
-with only a doubt, the `integer` and `boolean` aliases, a column-0
-comment, and a class that inherits (`Ebook < Book`), which brings the
+with only a doubt, the `integer` and `boolean` aliases, a document
+description on the first line (SPEC §3.1), which reaches the schema as its
+own `description`, and a class that inherits (`Ebook < Book`), which brings the
 identifier with it and replaces one inherited field. Its Mermaid output is derived with `notes` off, so no description
 or doubt appears in it. `systems.linkml.yaml` is the schema for the same
 model, and is where both enum-naming branches are under the LinkML gate:
@@ -47,7 +48,10 @@ only read, and the generator produces this YAML from this Skiss, exactly.
 **broken** (`broken.skiss`, `broken.mmd`, `broken.diagnostics.json`,
 `broken.linkml.yaml`). The mid-typing states. Every diagnostic code in the
 ARCHITECTURE.md table appears at least once, on a line preceded by a
-column-0 comment naming the code. Valid lines are interleaved so the
+column-0 comment naming the code. Its first line is a document description
+and a blank line follows it, so the labels below are ordinary comments
+(SPEC §3.1); among the states is a continuation line with no class or field
+above it to continue. Valid lines are interleaved so the
 partial document still has complete classes and relations.
 `broken.diagnostics.json` lists the expected code, severity and 1-based
 line for each diagnostic, sorted by line, without messages. `broken.mmd` is
@@ -62,6 +66,19 @@ class line, a primitive as a parent, `<` on a field line, a parent that is
 not declared, an identifier written on top of an inherited one, a field
 identical to the one it replaces, and two classes that inherit from each
 other, whose closing `<` is the one thing `resolve` cuts.
+
+**glossary** (`glossary.skiss`, `glossary.linkml.yaml`, `glossary.md`,
+`glossary.terms.md`, `glossary.notes.md`). The model the Markdown generator
+is held to, and the one that exercises SPEC 0.4.0: a document description
+written on two comment lines at the top, a description and two doubts on
+continuation lines under a class, a description and a doubt on continuation
+lines under a field, `@System` on a class and on a field, `<`, `~`, `=`, an
+inline enum, a `[]` of a class, untyped fields, an identifier with a type, a
+reference to an undeclared class, and a class with no description at all. The
+three Markdown files are what `skiss glossary` writes with no flags, with
+`--classes` and with `--notes`; `glossary.linkml.yaml` is where the
+schema-level `description` and a `note` of two lines are under the LinkML
+gate.
 
 **foreign** (`foreign.linkml.yaml`, `foreign.skiss`,
 `foreign.dropped.json`). The only fixture that starts as LinkML. A conference

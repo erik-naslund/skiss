@@ -1,0 +1,33 @@
+# The Bite Platform as the release meeting talks about it: the
+# environments, what is published to them, and who owns which word.
+
+Environment @Platform
+  # One installation of the Bite Platform, with its own data.
+  id*
+  name                                  # dev, integration, preview, prod ... not a fixed set
+  purpose: build|test|playtest|live
+
+Build @Pipeline                         # the zip the pipeline produces,
+  # one per commit that passes the gate.
+  ? is a reproducible build worth the cost
+  ? and who owns the signing key
+  id*
+  commit                                # the git SHA it was built from
+  environment: Environment              # app and web point at the same environment
+  publishedTo: Environment[]            # the same zip can be published to any environment
+  sizeInMb: int @Telemetry              # as the packer reports it,
+    # after compression
+    ? megabytes or mebibytes
+
+Release < Build                         # a build the release manager has signed off
+  channel: internal|closed|open
+
+Changelog @Docs ~ Build
+  slug*
+  buildId = Build.id
+  author: Person
+  body
+
+Award
+  code*: int
+  name                                  # what the jury called it

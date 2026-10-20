@@ -15,7 +15,7 @@ const SCHEMA_NAME: Record<string, string> = { 'spec-example': 'galaxy_catalogue'
 const schemaFor = (name: string): ReturnType<typeof toLinkML> =>
   toLinkML(parse(fixture(`${name}.skiss`)), { schemaName: SCHEMA_NAME[name] ?? name });
 
-describe.each(['basic', 'systems', 'spec-example'])('%s.skiss (AC2)', (name) => {
+describe.each(['basic', 'systems', 'spec-example', 'glossary'])('%s.skiss (AC2)', (name) => {
   test('fromLinkML(toLinkML(parse(x))).source equals toSkiss(parse(x))', () => {
     expect(fromLinkML(schemaFor(name)).source).toBe(toSkiss(parse(fixture(`${name}.skiss`))));
   });
@@ -44,7 +44,7 @@ describe('broken.skiss (AC2)', () => {
   });
 });
 
-describe.each(['basic', 'systems', 'spec-example'])('%s.skiss (AC2)', (name) => {
+describe.each(['basic', 'systems', 'spec-example', 'glossary'])('%s.skiss (AC2)', (name) => {
   test('the projected document re-compiles to the schema it came from', () => {
     const schema = schemaFor(name);
     const schemaName = SCHEMA_NAME[name] ?? name;
@@ -69,7 +69,7 @@ describe('foreign.linkml.yaml (AC3)', () => {
       'Dropped: 1 mixin class, minimum_value on 1 slot, unique_keys on 1 class, ' +
         '1 narrowed range, required on 3 slots, 1 mixin, 3 patterns, ' +
         'comments on 1 slot, see_also on 1 class, ' +
-        '1 description reworded, 1 enum detail, 1 schema key. ' +
+        '1 description reworded, 1 enum detail. ' +
         'Renamed: 19 names. Inlined: 1 enum.',
     );
   });

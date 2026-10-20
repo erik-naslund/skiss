@@ -1,3 +1,5 @@
+# What the printed programme of the conference is made of.
+
 Trackable                               # Anything whose revisions are counted.
   revision: int
 

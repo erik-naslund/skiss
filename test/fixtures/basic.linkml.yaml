@@ -81,7 +81,7 @@ classes:
         annotations:
           joins_to: Character.id
       summary:
-        description: free text, written by editors
+        description: free text, written by editors, one paragraph and no markup
       editCount:
         range: integer
 

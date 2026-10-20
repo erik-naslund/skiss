@@ -12,19 +12,21 @@ Your job: turn what people say into a *valid* sketch, keep it small, and show it
 
 ## Workflow
 
-1. **Write the sketch** in a ```skiss fence. Header comment on line 1 saying what it is about.
+1. **Write the sketch** in a ```skiss fence. A comment block on line 1 saying what it is about: that block is the document description.
 2. **Check it** against *The rules* and *Not in the language* below. If a shell is available, run the real compiler instead of checking by hand:
    `npx -y @eriknaslund/skiss compile model.skiss --strict -o /dev/null`
    Exit 1 or any line on standard error means the sketch has a diagnostic; fix it before showing anything. Diagnostics read `file:line:col: severity CODE message` (see `reference/diagnostics.md`).
 3. **Draw it.** With a shell: `npx -y @eriknaslund/skiss diagram model.skiss --notes` prints Mermaid (`--notes` turns `?` doubts into notes on the diagram). Without a shell: write the Mermaid yourself by the mapping in `reference/mermaid.md`, which is exactly what the compiler does. Put it in a ```mermaid fence; most chat hosts render it.
 4. **Offer the playground** when the person wants to keep editing: paste the sketch at <https://erik-naslund.github.io/skiss-playground/>, which draws it as they type, shares it as a link and exports SVG, PNG and LinkML.
-5. **LinkML only when asked.** `npx -y @eriknaslund/skiss compile model.skiss` writes the schema; the mapping is SPEC §5. Do not hand-write LinkML.
-6. When the sketch changes, redo steps 2 and 3 and replace both fences. Never edit the Mermaid by hand to say something the sketch does not.
+5. **A terminology page when asked for one.** `npx -y @eriknaslund/skiss glossary model.skiss --classes` writes the `#` descriptions out as a `| Term | Definition |` table in Markdown; without `--classes` it writes a section per class with its fields; `--notes` adds the `?` doubts as open questions. Write the definitions into the sketch and generate the page from it, never the other way round.
+6. **LinkML only when asked.** `npx -y @eriknaslund/skiss compile model.skiss` writes the schema; the mapping is SPEC §5. Do not hand-write LinkML.
+7. When the sketch changes, redo steps 2 and 3 and replace both fences. Never edit the Mermaid by hand to say something the sketch does not.
 
 ## The language on one screen
 
 ```skiss
-# Groups and schedules: who sees which content on a given day
+# Groups and schedules: who sees which content on a given day.
+# The first comment block in the file describes the whole sketch.
 
 Schedule @Content                 # only the differences; the rest is inherited
     id*
@@ -32,6 +34,7 @@ Schedule @Content                 # only the differences; the rest is inherited
     entries: ScheduleEntry[]
 
 ScheduleEntry @Content
+    # One row of a schedule: what changes, and between which two moments.
     id*
     targetType: game|level        # later also price, copy, flag
     from: datetime                ? whose day governs, UTC or player-local
@@ -62,8 +65,9 @@ PremiumSchedule < Schedule        # same shape, one extra field
 - `< Parent` on a class line is single inheritance. The child has the parent's fields; a child field with the same name replaces it.
 - `~ OtherClass` on a class line says the two classes describe the same thing in different systems. `= Other.field` on a field joins it to that field.
 - `# text` is a description, `? text` is an open question. Both need whitespace before the mark. On one line the description comes first and the `?` ends it. A `?` attached to a word (`seats?`) is ordinary text.
+- An indented line starting with `#` or `?` **continues** the class or field above it, as under `ScheduleEntry`: it is how a description longer than a line is written. The descriptions of one thing join with a space; two `?` lines are two open questions.
 - Order on a class line: name, `< Parent`, `@System`, `~ Class`, then `#` and `?`. On a field line: name, `*`, `: type`, `@System`, `= Class.field`, then `#` and `?`.
-- A `#` at column 0 is a comment line.
+- A `#` at column 0 is a comment line. The block of them at the very top of the file is the **document description**, which is what the sketch as a whole is about; it reaches LinkML and the glossary. A comment anywhere else is ignored.
 
 ## Not in the language
 
@@ -77,7 +81,7 @@ These are the mistakes most often made when translating a whiteboard into Skiss.
 - **No composite keys, units, patterns, constraints, defaults, or multiple inheritance.**
 - **No referencing a class that is not declared** without a warning. Declare a stub (`Player` with `id*`) rather than leave it dangling.
 - **No capitalised primitives.** `Int`, `String`, `Boolean` warn; write `int`, `string`, `bool`.
-- A `#` with whitespace before it inside a class or field line is a description, not a comment. Comments start at column 0.
+- A `#` with whitespace before it is never a comment: on a line it is a description, and on an indented line of its own it continues the description of the class or field above. Comments start at column 0, and the block at the top of the file is the sketch's own description.
 
 ## Style
 

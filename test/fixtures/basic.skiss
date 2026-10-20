@@ -25,5 +25,6 @@ Starship @Catalog
 CharacterPage @Community ~ Character    # the community wiki's version
   slug*
   characterId = Character.id
-  summary                               # free text, written by editors
+  summary                               # free text, written by editors,
+    # one paragraph and no markup
   editCount: int

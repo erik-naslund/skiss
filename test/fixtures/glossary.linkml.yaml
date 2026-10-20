@@ -1,0 +1,101 @@
+id: https://example.org/glossary
+name: glossary
+description: "The Bite Platform as the release meeting talks about it: the environments, what is published to them, and who owns which word."
+default_prefix: glossary
+default_range: string
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glossary: https://example.org/glossary/
+  platform: https://example.org/system/platform/
+  pipeline: https://example.org/system/pipeline/
+  telemetry: https://example.org/system/telemetry/
+  docs: https://example.org/system/docs/
+imports:
+  - linkml:types
+
+classes:
+
+  Environment:
+    description: One installation of the Bite Platform, with its own data.
+    annotations:
+      system: Platform
+    attributes:
+      id:
+        identifier: true
+      name:
+        description: dev, integration, preview, prod ... not a fixed set
+      purpose:
+        range: PurposeEnum
+
+  Build:
+    description: the zip the pipeline produces, one per commit that passes the gate.
+    annotations:
+      system: Pipeline
+      note: "is a reproducible build worth the cost
+
+        and who owns the signing key"
+    attributes:
+      id:
+        identifier: true
+      commit:
+        description: the git SHA it was built from
+      environment:
+        description: app and web point at the same environment
+        range: Environment
+      publishedTo:
+        description: the same zip can be published to any environment
+        range: Environment
+        multivalued: true
+      sizeInMb:
+        description: as the packer reports it, after compression
+        range: integer
+        annotations:
+          system: Telemetry
+          note: megabytes or mebibytes
+
+  Release:
+    description: a build the release manager has signed off
+    is_a: Build
+    attributes:
+      channel:
+        range: ChannelEnum
+
+  Changelog:
+    annotations:
+      system: Docs
+    close_mappings:
+      - pipeline:Build
+    attributes:
+      slug:
+        identifier: true
+      buildId:
+        annotations:
+          joins_to: Build.id
+      author:
+        range: Person
+      body: {}
+
+  Award:
+    attributes:
+      code:
+        range: integer
+        identifier: true
+      name:
+        description: what the jury called it
+
+  Person:
+    annotations:
+      undeclared: true
+
+enums:
+  PurposeEnum:
+    permissible_values:
+      build:
+      test:
+      playtest:
+      live:
+  ChannelEnum:
+    permissible_values:
+      internal:
+      closed:
+      open:

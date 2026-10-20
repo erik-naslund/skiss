@@ -197,6 +197,68 @@ describe.each(LINKML_FIXTURES)(
   },
 );
 
+// Issue #90, AC7. The glossary of a sketch, its three forms, and the options
+// they are asked for with.
+describe('skiss glossary test/fixtures/glossary.skiss', () => {
+  const file = 'test/fixtures/glossary.skiss';
+
+  test('stdout is glossary.md and the exit code is 0', () => {
+    const r = skiss(['glossary', file]);
+    expect(r.stdout).toBe(fixture('glossary.md'));
+    expect(r.status).toBe(0);
+  });
+
+  test('--classes writes the terms alone, --notes adds the open questions', () => {
+    expect(skiss(['glossary', file, '--classes']).stdout).toBe(fixture('glossary.terms.md'));
+    expect(skiss(['glossary', file, '--notes']).stdout).toBe(fixture('glossary.notes.md'));
+  });
+
+  test('the heading defaults to the basename without the extension', () => {
+    expect(skiss(['glossary', file]).stdout.split('\n')[0]).toBe('# glossary');
+    expect(skiss(['glossary', file, '--name', 'The Bite Platform']).stdout.split('\n')[0]).toBe(
+      '# The Bite Platform',
+    );
+  });
+
+  test('`-` reads standard input; the heading defaults to `sketch`', () => {
+    const r = skiss(['glossary', '-'], fixture('glossary.skiss'));
+    expect(r.status).toBe(0);
+    expect(r.stdout.split('\n')[0]).toBe('# sketch');
+    expect(r.stdout).toBe(fixture('glossary.md').replace('# glossary\n', '# sketch\n'));
+  });
+
+  test('stderr is the diagnostics of the sketch, as the other commands print them', () => {
+    const r = skiss(['glossary', file]);
+    expect(r.stderr).toMatch(
+      /^test\/fixtures\/glossary\.skiss:\d+:\d+: warning W_UNDECLARED_CLASS .+\n$/,
+    );
+    expect(skiss(['glossary', '--strict', file]).status).toBe(1);
+  });
+
+  test('-o writes the Markdown to the path verbatim and nothing to stdout (D1)', () => {
+    const out = join(tmp, 'glossary.md');
+    const r = skiss(['glossary', file, '-o', out]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe('');
+    expect(readFileSync(out, 'utf8')).toBe(fixture('glossary.md'));
+  });
+
+  test('without a file it exits 2, and so does an option it does not take', () => {
+    expect(skiss(['glossary']).status).toBe(2);
+    const r = skiss(['glossary', '--json', file]);
+    expect(r.status).toBe(2);
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toContain("Try 'skiss --help'");
+  });
+
+  test('`skiss --help` documents the command and its options', () => {
+    const r = skiss(['--help']);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('glossary <file>');
+    expect(r.stdout).toContain('--classes');
+  });
+});
+
 describe('skiss compile --name (AC2)', () => {
   test('the schema name defaults to the basename without the extension', () => {
     const r = skiss(['compile', 'test/fixtures/spec-example.skiss']);
@@ -255,6 +317,24 @@ describe.each(['basic', 'systems', 'spec-example'])(
   },
 );
 
+// Issue #90, AC2. `glossary.skiss` starts with two comment lines and a blank
+// line, which compile to the schema's own `description`.
+describe('skiss import of a schema with a description', () => {
+  test('writes the two comment lines back as one `#` line at the top', () => {
+    const [one = '', two = ''] = fixture('glossary.skiss').split('\n');
+    const r = skiss(['import', 'test/fixtures/glossary.linkml.yaml']);
+    expect(r.status).toBe(0);
+    expect(fixture('glossary.linkml.yaml')).toContain('\ndescription: ');
+    expect(r.stdout.split('\n')[0]).toBe(`${one} ${two.replace(/^# /, '')}`);
+    expect(r.stdout.split('\n')[1]).toBe('');
+  });
+
+  test('the sketch it writes is the one it came from, up to canonical form', () => {
+    const r = skiss(['import', 'test/fixtures/glossary.linkml.yaml']);
+    expect(r.stdout).toBe(toSkiss(parse(fixture('glossary.skiss'))));
+  });
+});
+
 describe('skiss import test/fixtures/broken.linkml.yaml (AC4)', () => {
   const file = 'test/fixtures/broken.linkml.yaml';
 
@@ -271,10 +351,10 @@ describe('skiss import test/fixtures/broken.linkml.yaml (AC4)', () => {
     // reading it back warns where `broken.skiss` warns.
     const lines = r.stderr.replace(/\n$/, '').split('\n');
     expect(lines).toEqual([
-      `${file}:13:20: warning W_UNDECLARED_CLASS class \`Ghost\` is not declared`,
-      `${file}:16:24: warning W_UNDECLARED_FIELD class \`Person\` has no field \`fullName\``,
-      `${file}:22:10: warning W_UNDECLARED_CLASS class \`Phantom\` is not declared`,
-      `${file}:26:3: warning W_REDUNDANT_OVERRIDE field \`name\` is identical to the one inherited from class \`Ship\` on line 3`,
+      `${file}:15:20: warning W_UNDECLARED_CLASS class \`Ghost\` is not declared`,
+      `${file}:18:24: warning W_UNDECLARED_FIELD class \`Person\` has no field \`fullName\``,
+      `${file}:24:10: warning W_UNDECLARED_CLASS class \`Phantom\` is not declared`,
+      `${file}:28:3: warning W_REDUNDANT_OVERRIDE field \`name\` is identical to the one inherited from class \`Ship\` on line 5`,
     ]);
   });
 
@@ -296,7 +376,7 @@ describe('skiss import test/fixtures/foreign.linkml.yaml (AC2, AC4)', () => {
   test('stderr is the SPEC §8 report first, then the diagnostics (D2)', () => {
     const r = skiss(['import', file]);
     expect(r.stderr).toBe(
-      `${dropped()}\n${file}:5:13: warning W_UNKNOWN_TYPE unknown type \`time\`, treated as \`string\`\n`,
+      `${dropped()}\n${file}:7:13: warning W_UNKNOWN_TYPE unknown type \`time\`, treated as \`string\`\n`,
     );
   });
 
@@ -310,7 +390,7 @@ describe('skiss import test/fixtures/foreign.linkml.yaml (AC2, AC4)', () => {
     const r = skiss(['import', '-'], fixture('foreign.linkml.yaml'));
     expect(r.stdout).toBe(fixture('foreign.skiss'));
     expect(r.stderr).toBe(
-      `${dropped()}\n<stdin>:5:13: warning W_UNKNOWN_TYPE unknown type \`time\`, treated as \`string\`\n`,
+      `${dropped()}\n<stdin>:7:13: warning W_UNKNOWN_TYPE unknown type \`time\`, treated as \`string\`\n`,
     );
     expect(r.status).toBe(0);
   });

@@ -3,16 +3,18 @@ import { describe, expect, test } from 'vitest';
 import type { Document, TypeRef } from '../src/index.ts';
 import { parse, toSkiss } from '../src/index.ts';
 
-// Issue #45, AC2 and AC3. `basic.skiss` and `spec-example.skiss` are already
-// written in the canonical format and carry no column-0 comment, so the
-// printer must reproduce them byte for byte. `systems.skiss` and
-// `broken.skiss` cannot be: one has a column-0 comment, the other has lines
-// that fail to parse. For those the document is the contract.
+// Issue #45, AC2 and AC3. `spec-example.skiss` is written in the canonical
+// format, so the printer must reproduce it byte for byte. The other three
+// cannot be: `basic.skiss` writes one description on a continuation line,
+// which the printer writes back on the element's own line (issue #90);
+// `systems.skiss` has a column-0 comment that is not the document
+// description; `broken.skiss` has lines that fail to parse. For those the
+// document is the contract.
 
 const fixture = (name: string): string =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
 
-const ALL = ['basic', 'spec-example', 'systems', 'broken'];
+const ALL = ['basic', 'spec-example', 'systems', 'broken', 'glossary'];
 
 /**
  * A document with everything that is a source position removed: line numbers,
@@ -21,6 +23,13 @@ const ALL = ['basic', 'spec-example', 'systems', 'broken'];
  * means, which is all a canonical printer can carry.
  */
 function meaning(doc: Document) {
+  return {
+    description: doc.description,
+    classes: classMeaning(doc),
+  };
+}
+
+function classMeaning(doc: Document) {
   return doc.classes.map((cls) => ({
     name: cls.name.text,
     parent: cls.parent?.text,
@@ -55,13 +64,13 @@ function typeMeaning(type: TypeRef) {
   }
 }
 
-describe.each(['basic', 'spec-example'])('%s.skiss (AC2)', (name) => {
+describe.each(['spec-example'])('%s.skiss (AC2)', (name) => {
   test(`toSkiss(parse(${name}.skiss)) equals ${name}.skiss byte for byte`, () => {
     expect(toSkiss(parse(fixture(`${name}.skiss`)))).toBe(fixture(`${name}.skiss`));
   });
 });
 
-describe.each(['systems', 'broken'])('%s.skiss (AC2)', (name) => {
+describe.each(['basic', 'systems', 'broken', 'glossary'])('%s.skiss (AC2)', (name) => {
   test('parse(toSkiss(parse(x))) is parse(x) without positions and diagnostics', () => {
     const doc = parse(fixture(`${name}.skiss`));
     expect(meaning(parse(toSkiss(doc)))).toEqual(meaning(doc));

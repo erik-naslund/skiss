@@ -113,12 +113,23 @@ const DROPPED = 'dropped-class' as const;
 const FIELD_ORDER = 'name, `*`, `: type`, `@System`, `= Class.field`, then `#` and `?`';
 const CLASS_ORDER = 'name, `< Parent`, `@System`, `~ Class`, then `#` and `?`';
 
+/** SPEC §3.9: a continuation line with nothing above it to continue. */
+const NO_ELEMENT_ABOVE = 'A description line needs a class or a field above it';
+
 export function parse(source: string): Document {
   const classes: ClassNode[] = [];
   const diagnostics: Diagnostic[] = [];
   // The class a field attaches to: a class in the document, `DROPPED` for a
   // class line that failed at one of its names, or nothing before the first.
   let current: ClassNode | typeof DROPPED | undefined;
+  // SPEC §3.9: the nearest class or field line above, which a continuation
+  // line continues. The last one that parsed: a line that was skipped is not
+  // in the document, so there is nothing on it to continue.
+  let target: ClassNode | FieldNode | undefined;
+  // SPEC §3.1: the comment lines of the document description, which is the
+  // run that starts on the first line of the file. Any other line ends it.
+  const header: string[] = [];
+  let inHeader = true;
 
   // A single leading U+FEFF is an editor's byte order mark, not content.
   // Stripping it keeps line 1 a class line and columns equal to what the
@@ -129,10 +140,41 @@ export function parse(source: string): Document {
     const line = i + 1;
     const text = (lines[i] ?? '').replace(/[ \t]+$/, '');
     const first = text[0];
-    if (first === undefined || first === '#') continue; // blank or comment, SPEC §3.1
+    // Blank or comment, SPEC §3.1. A comment while the first run lasts is a
+    // line of the document description; every other one is ignored.
+    if (first === undefined) {
+      inHeader = false;
+      continue;
+    }
+    if (first === '#') {
+      if (inHeader) header.push(headerLine(text));
+      continue;
+    }
+    inHeader = false;
 
     if (isWs(first)) {
       const start = text.search(/[^ \t]/);
+      // SPEC §3.9: an indented line that starts a trailer is a continuation
+      // line, not a field. It is read on its own and added to the nearest
+      // class or field line above it.
+      if (text[start] === '#' || isDoubtMarker(text, start)) {
+        // A continuation under a class line that failed at a name is dropped
+        // with it, as the fields under it are.
+        if (current === DROPPED) continue;
+        if (target === undefined) {
+          diagnostics.push({
+            severity: 'error',
+            code: 'E_UNPARSABLE',
+            message: NO_ELEMENT_ABOVE,
+            line,
+            col: start,
+            end: text.length,
+          });
+          continue;
+        }
+        continueTrailer(target, splitTrailer(text));
+        continue;
+      }
       if (current === undefined) {
         diagnostics.push({
           severity: 'error',
@@ -148,7 +190,10 @@ export function parse(source: string): Document {
       // A field under a dropped class is still read on its own, so its own
       // mistakes are still reported; it has nowhere to attach and is dropped.
       if (!result.ok) diagnostics.push(result.diagnostic);
-      else if (current !== DROPPED) current.fields.push(result.value);
+      else if (current !== DROPPED) {
+        current.fields.push(result.value);
+        target = result.value;
+      }
       continue;
     }
 
@@ -157,6 +202,7 @@ export function parse(source: string): Document {
       if (result.ok) {
         classes.push(result.value);
         current = result.value;
+        target = result.value;
       } else {
         // A class line that failed at one of its names is still a class line
         // above: the fields under it are dropped with it, silently (issue
@@ -165,6 +211,8 @@ export function parse(source: string): Document {
         // class before it.
         diagnostics.push(result.diagnostic);
         current = result.atName ? DROPPED : undefined;
+        // The line was skipped, so there is nothing on it to continue.
+        target = undefined;
       }
       continue;
     }
@@ -179,7 +227,18 @@ export function parse(source: string): Document {
     });
   }
 
-  return { classes, diagnostics };
+  const document: Document = { classes, diagnostics };
+  // SPEC §3.1: the lines join with a single space. A line with nothing after
+  // its `#` adds nothing, so a run of them is not a description at all.
+  const description = header.filter((part) => part !== '').join(' ');
+  if (description !== '') document.description = description;
+  return document;
+}
+
+/** SPEC §3.1: a comment line loses its `#` and one space or tab after it. */
+function headerLine(text: string): string {
+  const rest = text.slice(1);
+  return isWs(rest[0]) ? rest.slice(1) : rest;
 }
 
 // ---------------------------------------------------------------------------
@@ -229,6 +288,24 @@ function splitTrailer(text: string): Trailer {
     if (note !== '') trailer.note = note;
   }
   return trailer;
+}
+
+/**
+ * SPEC §3.9: a continuation line added to the element above it. The
+ * descriptions of one element join with a single space, in source order, so
+ * the one on the element's own line comes first. The doubts are kept apart,
+ * one line each: two doubts are two open questions and never one sentence.
+ */
+function continueTrailer(node: { description?: string; note?: string }, trailer: Trailer): void {
+  if (trailer.description !== undefined) {
+    node.description =
+      node.description === undefined
+        ? trailer.description
+        : `${node.description} ${trailer.description}`;
+  }
+  if (trailer.note !== undefined) {
+    node.note = node.note === undefined ? trailer.note : `${node.note}\n${trailer.note}`;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -432,14 +509,13 @@ function parseFieldLine(text: string, line: number): Result<FieldNode> {
 
   const head = take(c);
   if (head === undefined) {
-    // Nothing before the trailer. SPEC §3.1 defines comments at column 0
-    // only, so an indented `#` line is a field line without a name.
+    // Nothing before the trailer. An indented line that is nothing but a
+    // trailer is a continuation line and never reaches here (SPEC §3.9).
     const col = text.search(/[^ \t]/);
-    const message =
-      text[col] === '#'
-        ? 'A `#` comment must start at column 0; an indented line is a field and needs a name'
-        : 'A field line needs a field name before its trailer';
-    return fail('E_UNPARSABLE', message, line, { col, end: Math.max(col + 1, text.length) });
+    return fail('E_UNPARSABLE', 'A field line needs a field name before its trailer', line, {
+      col,
+      end: Math.max(col + 1, text.length),
+    });
   }
   if (head.kind !== 'word') return unexpected(head, line, 'field', FIELD_ORDER);
   if (!FIELD_NAME.test(head.text)) {

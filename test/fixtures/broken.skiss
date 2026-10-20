@@ -1,5 +1,9 @@
+# Every diagnostic in the ARCHITECTURE.md table, on the line under its name.
+
 # E_FIELD_WITHOUT_CLASS: a field indented under nothing
   orphan
+# E_UNPARSABLE: a description line with no class or field line above it
+  # nothing to describe yet
 
 Ship @Fleet                             # a vessel in the registry
   id*

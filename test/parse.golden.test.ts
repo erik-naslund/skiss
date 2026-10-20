@@ -71,7 +71,7 @@ describe('broken.skiss (ARCHITECTURE.md diagnostics table)', () => {
 
   test('W_MULTIPLE_IDENTIFIERS on `registration*` spans the `*`, not the name (issue #16)', () => {
     const [warning] = resolve(doc).diagnostics.filter((d) => d.code === 'W_MULTIPLE_IDENTIFIERS');
-    expect(warning).toMatchObject({ line: 14, col: 14, end: 15 });
+    expect(warning).toMatchObject({ line: 18, col: 14, end: 15 });
     const source = fixture('broken.skiss').split('\n')[(warning?.line ?? 0) - 1] ?? '';
     expect(source).toBe('  registration*');
     expect(source.slice(warning?.col, warning?.end)).toBe('*');

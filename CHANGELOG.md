@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A description can stand on its own lines.** An indented line that starts
+  with `#` or `?` continues the description or the doubt of the class or field
+  above it, so a definition no longer has to fit beside the thing it defines.
+  The descriptions of one element join with a single space; the doubts stay one
+  line each, and `--notes` draws one note per doubt.
+- **A sketch can describe itself.** The comment block at the top of a file is
+  the document description. It compiles to the schema's own `description`,
+  `skiss import` reads it back, and `skiss glossary` puts it under the heading.
+  Every other column-0 comment is an ordinary comment, as before.
+- **`skiss glossary model.skiss`** writes the descriptions of a sketch as
+  Markdown: one section per class, its fields in a table, class references
+  linked to their sections. `--classes` writes the terms alone as a
+  `| Term | Definition |` table, `--notes` adds the doubts as open questions —
+  the only form that shows them, because a doubt is never documentation — and
+  `--name` sets the heading. The library exports `toGlossary` and `compile`
+  takes a `glossary` target.
+- **The specification is at 0.4.0**, the three additions above.
+
+### Changed
+
+- **An indented `#` line is a description, not a broken field.** It used to be
+  `E_UNPARSABLE` with "A `#` comment must start at column 0"; it is now a
+  continuation line. The error that remains is a continuation line with nothing
+  above it to continue: "A description line needs a class or a field above it".
+
 ## [0.7.0] - 2026-10-12
 
 The diagram says no more than the sketch, and an assistant can write it.
