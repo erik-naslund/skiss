@@ -1,6 +1,6 @@
 # Skiss
 
-**Specification, version 0.3.1**
+**Specification, version 0.4.0**
 
 *Applies to skiss 0.7.0.* The specification and the package carry separate version numbers: this document describes the language, and it moves when the language does.
 
@@ -46,11 +46,14 @@ Starship @Catalog
 CharacterPage @Community ~ Character    # the community wiki's version
   slug*
   characterId = Character.id
-  summary                               # free text, written by editors
+  summary                               # free text, written by editors,
+    # one paragraph and no markup
   editCount: int
 ```
 
 Classes at column 0, fields indented under them. Seven operators (`:` `[]` `|` `@` `~` `=` `<`) and three markers (`*` `#` `?`). The example above uses every one of them but `<`, which is inheritance (§3.10).
+
+An indented line that starts with `#` or `?`, as the second line of `summary` does, continues the description or the doubt of the class or field above it (§3.9). A `#` block at the top of the file describes the whole document (§3.1).
 
 ---
 
@@ -60,7 +63,9 @@ Classes at column 0, fields indented under them. Seven operators (`:` `[]` `|` `
 
 - A line at column 0 that starts with an uppercase letter declares a **class**.
 - A line with any leading whitespace declares a **field** of the most recent class. Indentation depth is not significant.
+- A line with leading whitespace whose first other character starts a trailer — a `#`, or a `?` that stands alone (§3.9) — is a **continuation line**. It carries no field: it continues the description or the doubt of the nearest class or field line above it (§3.9).
 - A line at column 0 that starts with `#` is a **comment**. Generators ignore it.
+- The **document description** is the run of comment lines that starts on the first line of the file and ends at the first line that is not one: a blank line, a class line, or anything else. Each of its lines loses its `#` and one space or tab after it, and the lines join with a single space. A file that does not start with a comment line has no document description, and every comment outside that first run is an ordinary comment.
 - Blank lines are ignored.
 - Class names are `UpperCamelCase`. Field names are `lowerCamelCase`.
 
@@ -165,6 +170,22 @@ crewSize: int       # is this seats?
 
 The first line has a description ending in a question mark, then a doubt. The second has a description and no doubt.
 
+**Continuation lines.** A trailer may also stand on indented lines of its own under the class or field it belongs to, which is how a description longer than a line is written.
+
+```
+Player @Game
+  # The person holding the controller ? or should it be joystick
+  # even when the same human plays two seats.
+  name
+  score: int
+    # as shown on the scoreboard, after penalties
+```
+
+A continuation line is delimited exactly as a trailer on the line itself is, by the rule above. It continues the **nearest class or field line above it**, never a comment at column 0 and never a line further up than the nearest one; a continuation line with no class or field line above it is an error (§7). A bare `#` or `?` with no text after it adds nothing, there as on the line itself.
+
+- **Descriptions join.** Every description of one element, the one on its own line and every continuation, joins with a single space into one description, in source order: the one on the element's line comes first.
+- **Doubts stay apart.** Every doubt of one element is kept as a line of its own, in source order. Two doubts are two open questions and never one sentence.
+
 ### 3.10 `<` inherits
 
 ```
@@ -192,7 +213,7 @@ A field written on the child with the name of a field it inherits **replaces** i
 
 ```ebnf
 document     = { line } ;
-line         = class-line | field-line | comment-line | blank ;
+line         = class-line | field-line | continuation-line | comment-line | blank ;
 
 comment-line = "#" text ;                                  (* at column 0 *)
 class-line   = ClassName [ "<" ClassName ] [ "@" System ]
@@ -202,6 +223,7 @@ field-line   = WS field-name [ "*" ]
                             [ "@" System ]
                             [ "=" ClassName "." field-name ]
                             [ trailer ] ;
+continuation-line = WS trailer ;                           (* §3.9, at least one part *)
 
 trailer      = [ "#" text ] [ "?" text ] ;                 (* delimited per §3.9 *)
 type         = ( primitive | ClassName | enum ) [ "[]" ] ;
@@ -228,7 +250,7 @@ Modifier order is fixed as written, on a class line and on a field line alike.
 
 **Whitespace.** A space and a tab are the same character to the grammar. Between tokens it is not significant and any amount of it is allowed: `name : int`, `name:int` and `films: Film []` all read as the same line. `[]` is one token, so `Person[ ]` is an unclosed `[`. What is significant is the whitespace at the start of a line, which is what makes the line a field of the class above it; one or more spaces or tabs, and no further meaning is given to how many. Trailing whitespace is not part of a name, a type or a trailer text. A line that is empty or holds only whitespace is a blank line and is skipped.
 
-Every line parses independently of every other line. Facts that involve more than one line (a referenced class exists, a name is duplicated) are established afterwards and produce warnings only (§7).
+Every line parses independently of every other line: what a line says is read from that line alone. Which element it says it *about* is the one thing a line takes from the lines above it — a field belongs to the class above it, and a continuation line to the class or field above it — and that is all either of them takes. Facts that involve more than one line (a referenced class exists, a name is duplicated) are established afterwards and produce warnings only (§7).
 
 File extension: `.skiss`. Code fence language: `skiss`.
 
@@ -253,8 +275,9 @@ File extension: `.skiss`. Code fence language: `skiss`.
 | a field replacing an inherited one | an attribute of the child with the same name; the parent's attribute is not repeated for any other field |
 | `~ Other` | `close_mappings: [<prefix>:Other]` |
 | `= Other.field` | `annotations: {joins_to: "Other.field"}` |
-| `# text` | `description: text` |
-| `? text` | `annotations: {note: text}` |
+| `# text` | `description: text`; the descriptions of one element join with a single space (§3.9) |
+| `? text` | `annotations: {note: text}`; the doubts of one element are the lines of that one value, in source order |
+| the document description (§3.1) | the schema's own `description`, written after `name` |
 | reference to an undeclared class | a stub class with `annotations: {undeclared: true}` |
 
 Fields compile to class-local `attributes`, never to top-level `slots` ([ADR 0005](adr/0005-class-local-attributes.md)).
@@ -281,7 +304,7 @@ imports:
   - linkml:types
 ```
 
-The base URI is a placeholder. The schema name is taken from the file name and normalised to a valid LinkML name (lowercase, underscores).
+The base URI is a placeholder. The schema name is taken from the file name and normalised to a valid LinkML name (lowercase, underscores). A document description (§3.1) is the one thing a sketch adds to this block: it is written as `description`, between `name` and `default_prefix`.
 
 ### 5.3 Worked example
 
@@ -413,6 +436,7 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 | any other LinkML type (`time`, `curie`, `ncname`, …) | the word as written, lowercase, which reads as an unknown type (§3.2) and falls back to `string` |
 | `multivalued: true` | `[]` |
 | `description` | `#`, its newlines replaced by spaces |
+| the schema's own `description` | the document description (§3.1), one `#` line at the top of the file, its newlines replaced by spaces |
 | `annotations: {system: S}` | `@S` |
 | `annotations: {note: text}` | `? text` |
 | `annotations: {joins_to: Class.field}` | `= Class.field` |
@@ -422,13 +446,13 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 
 **Multivalued.** `multivalued: true` is `[]`, and `[]` has to attach to a type. Where a row above writes no type — `string`, an enum Skiss cannot write, a range it cannot write — a multivalued slot is written `string[]` rather than untyped.
 
-**Descriptions.** A `description` is written as it stands, its newlines replaced by spaces, except for a standalone `?` in its text. Written as it stands, such a `?` would read as the start of a doubt when the sketch is parsed again (§3.9): the sentence would come back split across `#` and `?`, and a doubt already on the element would be appended to the half that was split off. So the `?` is attached to the word before it — the whitespace between them is dropped — which §3.9 reads as ordinary text. A `?` with no word before it attaches to the `#` that starts the description, as `#? confirm`. Nothing else in the text changes, and every description reworded this way is reported, counted as `1 description reworded`. A doubt is not touched: a `?` anywhere in it is ordinary text, because a doubt runs to the end of the line.
+**Descriptions.** A `description` on a class or a slot is written as it stands, its newlines replaced by spaces, except for a standalone `?` in its text. Written as it stands, such a `?` would read as the start of a doubt when the sketch is parsed again (§3.9): the sentence would come back split across `#` and `?`, and a doubt already on the element would be appended to the half that was split off. So the `?` is attached to the word before it — the whitespace between them is dropped — which §3.9 reads as ordinary text. A `?` with no word before it attaches to the `#` that starts the description, as `#? confirm`. Nothing else in the text changes, and every description reworded this way is reported, counted as `1 description reworded`. A doubt is not touched: a `?` anywhere in it is ordinary text, because a doubt runs to the end of the line. Neither is the schema's own `description`: it is written as a comment line at column 0, where a `#` and a `?` are both ordinary text (§3.1), so there is nothing for the rewriting to prevent and nothing to report.
 
 **Enums.** Skiss has no named enums, so an enum is inlined at every attribute whose range it is and its name is not carried. An enum used by exactly one attribute is inlined and nothing is reported. An enum used by several is inlined in each of them, and is reported when the inlining loses the sharing: when §5.1 would not rebuild one enum from the result, because the attributes do not all have one name, or because another attribute of that name carries different values. A permissible value with a body of its own — a `description`, a `meaning`, anything else — is inlined by its key and its body is reported, as is any key on the enum other than `permissible_values`. An enum Skiss cannot write, one with fewer than two values (§3.4) or with a value that is not a Skiss value (§4), is not inlined at all: the attribute keeps no type, and the enum is reported. A value of digits is a Skiss value, so an enum of `1`, `2` and `3` is inlined like any other.
 
 ### The report
 
-Everything the table does not carry is reported, never dropped silently: `mixins`, `slot_usage` the table has no field for, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A key the table does carry, written with a value it cannot be read from — an `identifier` or a `multivalued` that is not a boolean, a `range` that is not a name, an `attributes` block that is not a map, a `slots` block that is not a list, an attribute whose body is not a slot definition — is reported under that key too, with what was found there. It is never guessed at: which YAML dialect wrote `yes` is the reader's question, not the sketch's. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. `slot_usage` naming a slot the sketch cannot find — the class has no parent the schema defines, or no parent of it declares the slot — is reported on the class instead, naming the slot. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported; every other key at schema level is reported, one report each.
+Everything the table does not carry is reported, never dropped silently: `mixins`, `slot_usage` the table has no field for, `required`, `key`, `pattern`, `unit`, `minimum_value` and `maximum_value`, `unique_keys`, mapping kinds other than `close_mappings`, `comments`, `see_also`, and every other key on a class, a slot or an enum. A key the table does carry, written with a value it cannot be read from — an `identifier` or a `multivalued` that is not a boolean, a `range` that is not a name, an `attributes` block that is not a map, a `slots` block that is not a list, an attribute whose body is not a slot definition — is reported under that key too, with what was found there. It is never guessed at: which YAML dialect wrote `yes` is the reader's question, not the sketch's. A report names the LinkML key, the element it was on — a class, a `Class.field`, or an enum, named as it appears in the sketch — and, where that helps, what was on it. `slot_usage` naming a slot the sketch cannot find — the class has no parent the schema defines, or no parent of it declares the slot — is reported on the class instead, naming the slot. Schema-level boilerplate (`id`, `name`, `prefixes`, `imports`, `default_prefix`, `default_range`, `title`, `license`, `version`) is not reported, and neither is the schema's own `description`, which the table above carries; every other key at schema level is reported, one report each.
 
 The reports are counted, grouped by kind, and written as one line in schema order:
 
@@ -444,7 +468,7 @@ Dropped: pattern on 1 slot. Renamed: 6 names. Inlined: 1 enum.
 
 A projection that dropped nothing reports an empty line, not a line saying that nothing was dropped.
 
-**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`) and a column-0 comment, which no document node holds, does not survive. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
+**Round-tripping is asymmetric.** Skiss → LinkML → Skiss is identity up to canonical form for every document LinkML carries whole: what comes back is the same document in the one layout `toSkiss` writes, so an alias normalises to the primitive it names (`integer` comes back as `int`), a description written on continuation lines comes back on the element's own line, and the second and later doubts of one element come back as continuation lines of their own. The document description survives, as the schema's `description`; every other column-0 comment, which no document node holds, does not. LinkML → Skiss → LinkML is lossy unless the original is retained; the report says by how much.
 
 ### 8.1 Editing a projected schema
 
