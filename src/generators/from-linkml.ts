@@ -70,6 +70,8 @@ const SLOT_TAGS = new Set(['system', 'note', 'joins_to']);
 const QUIET_SCHEMA_KEYS = new Set([
   'id',
   'name',
+  // SPEC §8: the schema's own `description` is the document description.
+  'description',
   'prefixes',
   'imports',
   'default_prefix',
@@ -206,7 +208,7 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
 
     const rawNote = annotations.get('note');
     if (typeof rawNote === 'string') {
-      const note = oneLine(rawNote);
+      const note = doubtLines(rawNote);
       if (note !== undefined) node.note = note;
     } else if (rawNote !== undefined) report('annotation', name, notText('note', rawNote));
 
@@ -344,7 +346,15 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
     if (!QUIET_SCHEMA_KEYS.has(key)) report('schema', schemaName, `\`${key}\``);
   }
 
-  const source = toSkiss({ classes, diagnostics: [] });
+  // SPEC §8: the schema's own `description` is the document description, one
+  // `#` line at the top of the sketch. It is not reworded as an element's
+  // description is: at column 0 a `#` and a `?` are both ordinary text, so
+  // there is nothing for the rewriting to prevent and nothing to report.
+  const projected: Document = { classes, diagnostics: [] };
+  const schemaDescription = oneLine(stringOf(get(root, 'description')));
+  if (schemaDescription !== undefined) projected.description = schemaDescription;
+
+  const source = toSkiss(projected);
   return { document: parse(source), source, dropped };
 
   // -------------------------------------------------------------------------
@@ -404,7 +414,7 @@ export function fromLinkML(schema: unknown): FromLinkMLResult {
 
     const rawNote = annotations.get('note');
     if (typeof rawNote === 'string') {
-      const note = oneLine(rawNote);
+      const note = doubtLines(rawNote);
       if (note !== undefined) field.note = note;
     } else if (rawNote !== undefined) report('annotation', element, notText('note', rawNote));
 
@@ -754,6 +764,19 @@ function oneLine(text: string | undefined): string | undefined {
   if (text === undefined) return undefined;
   const line = text.replace(/\s*[\r\n]+\s*/g, ' ').trim();
   return line === '' ? undefined : line;
+}
+
+/**
+ * SPEC §5.1: the doubts of one element are the lines of its `note`, so a
+ * `note` of several lines projects to several doubts, which `toSkiss` writes
+ * as continuation lines (SPEC §3.9). A blank line is no doubt at all.
+ */
+function doubtLines(text: string): string | undefined {
+  const lines = text
+    .split(/\r\n|\n|\r/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  return lines.length === 0 ? undefined : lines.join('\n');
 }
 
 const list = (items: string[]): string => items.map((item) => `\`${item}\``).join(', ');

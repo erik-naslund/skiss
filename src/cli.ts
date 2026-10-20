@@ -16,6 +16,7 @@ const HELP = `Usage: skiss <command> [options]
 Commands:
   diagram <file>       Write a Mermaid class diagram for a .skiss file.
   compile <file>       Write a LinkML schema for a .skiss file.
+  glossary <file>      Write the descriptions of a .skiss file as Markdown.
   import <file>        Write Skiss for a LinkML schema file, YAML or JSON.
   render <file>        Write an SVG or a PNG of the class diagram, through
                        the Mermaid CLI (mmdc), which must be installed.
@@ -24,10 +25,12 @@ Commands:
 Options:
   -o, --output <path>  Write the output to <path> instead of standard output
       --notes          diagram, render: emit \`? text\` doubts as Mermaid notes
+                       glossary: list the doubts as open questions
       --json           compile: write the schema as JSON instead of YAML
-      --name <name>    compile: the schema name. Defaults to the file's
-                       basename without its extension, or \`sketch\` for
-                       standard input.
+      --classes        glossary: write the classes alone, as a table of terms
+      --name <name>    compile: the schema name; glossary: the heading.
+                       Defaults to the file's basename without its
+                       extension, or \`sketch\` for standard input.
       --format <fmt>   render: svg or png. Defaults to the extension of
                        -o, and to svg when there is no -o. png needs an -o:
                        only the SVG can go to standard output.
@@ -70,6 +73,7 @@ const EXIT_INTERNAL = 70;
 const COMMANDS = {
   diagram: ['output', 'notes', 'strict'],
   compile: ['output', 'json', 'name', 'strict'],
+  glossary: ['output', 'classes', 'notes', 'name', 'strict'],
   import: ['output', 'strict'],
   render: ['output', 'notes', 'format', 'scale', 'strict'],
 } as const;
@@ -103,6 +107,7 @@ async function main(argv: string[]): Promise<number> {
       output: { type: 'string', short: 'o' },
       notes: { type: 'boolean' },
       json: { type: 'boolean' },
+      classes: { type: 'boolean' },
       name: { type: 'string' },
       format: { type: 'string' },
       scale: { type: 'string' },
@@ -199,14 +204,25 @@ function runCommand(
   command: Command,
   source: string,
   file: string,
-  values: { name?: string; json?: boolean; notes?: boolean },
+  values: { name?: string; json?: boolean; notes?: boolean; classes?: boolean },
 ): CommandResult {
   if (command === 'import') return importLinkML(source);
+  if (command === 'glossary') {
+    return {
+      ...compile(source, {
+        target: 'glossary',
+        name: values.name ?? defaultName(file),
+        classes: values.classes,
+        notes: values.notes,
+      }),
+      dropped: [],
+    };
+  }
   if (command === 'compile') {
     return {
       ...compile(source, {
         target: 'linkml',
-        schemaName: values.name ?? defaultSchemaName(file),
+        schemaName: values.name ?? defaultName(file),
         format: values.json === true ? 'json' : 'yaml',
       }),
       dropped: [],
@@ -216,10 +232,12 @@ function runCommand(
 }
 
 /**
- * Issue #24, AC2. `toLinkML` normalises this to a valid LinkML name
- * (SPEC §5.2), so a basename with a dot or a dash in it needs nothing here.
+ * Issue #24, AC2: the schema name, and the glossary heading (issue #90), both
+ * default to the file's basename. `toLinkML` normalises its own to a valid
+ * LinkML name (SPEC §5.2), so a basename with a dot or a dash in it needs
+ * nothing here; a heading is a line of Markdown and needs nothing either.
  */
-const defaultSchemaName = (file: string): string =>
+const defaultName = (file: string): string =>
   file === '-' ? 'sketch' : basename(file, extname(file));
 
 async function readSource(file: string): Promise<string> {

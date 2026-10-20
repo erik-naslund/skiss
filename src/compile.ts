@@ -3,6 +3,7 @@
 // produces diagnostics and the output of the partial document.
 
 import type { Diagnostic } from './ast.ts';
+import { type GlossaryOptions, toGlossary } from './generators/glossary.ts';
 import { toLinkML } from './generators/linkml.ts';
 import { type MermaidOptions, toMermaid } from './generators/mermaid.ts';
 import { parse } from './parse.ts';
@@ -23,12 +24,19 @@ export interface LinkMLCompileOptions {
   format?: SerializeFormat;
 }
 
+/** `toGlossary` text from the source (issue #90). */
+export interface GlossaryCompileOptions extends GlossaryOptions {
+  target: 'glossary';
+  /** The heading. Normally the file name, as `schemaName` is. */
+  name: string;
+}
+
 /**
  * A union rather than one shape with optional keys, so `schemaName` is
  * required exactly when it is used and a `mermaid` call cannot carry a
  * `format` that would be ignored.
  */
-export type CompileOptions = MermaidCompileOptions | LinkMLCompileOptions;
+export type CompileOptions = MermaidCompileOptions | LinkMLCompileOptions | GlossaryCompileOptions;
 
 export interface CompileResult {
   /** The generated text, `\n`-terminated, whatever the platform. */
@@ -39,9 +47,16 @@ export interface CompileResult {
 
 export function compile(source: string, opts: CompileOptions): CompileResult {
   const doc = resolve(parse(source));
-  const output =
-    opts.target === 'linkml'
-      ? serialize(toLinkML(doc, { schemaName: opts.schemaName }), opts.format ?? 'yaml')
-      : toMermaid(doc, { notes: opts.notes });
-  return { output, diagnostics: doc.diagnostics };
+  return { output: generate(doc, opts), diagnostics: doc.diagnostics };
+}
+
+function generate(doc: ReturnType<typeof resolve>, opts: CompileOptions): string {
+  switch (opts.target) {
+    case 'linkml':
+      return serialize(toLinkML(doc, { schemaName: opts.schemaName }), opts.format ?? 'yaml');
+    case 'glossary':
+      return toGlossary(doc, { name: opts.name, classes: opts.classes, notes: opts.notes });
+    case 'mermaid':
+      return toMermaid(doc, { notes: opts.notes });
+  }
 }

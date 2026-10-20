@@ -72,8 +72,29 @@ describe('types (SPEC §3.2 to §3.4)', () => {
 describe('the document as a whole', () => {
   test('a document with no classes is the empty string', () => {
     expect(toSkiss(parse(''))).toBe('');
-    expect(toSkiss(parse('# just a comment\n'))).toBe('');
+    // SPEC §3.1: a comment that is not the document description is held by no
+    // node, so it does not survive; the document description is, and does.
+    expect(toSkiss(parse('\n# just a comment\n'))).toBe('');
+    expect(toSkiss(parse('# what this is about\n'))).toBe('# what this is about\n');
     expect(toSkiss({ classes: [], diagnostics: [] })).toBe('');
+  });
+
+  test('the document description is the first line, then a blank line (SPEC §3.1)', () => {
+    expect(toSkiss(parse('# what this is about\n# in two lines\n\nA\n  x\n'))).toBe(
+      '# what this is about in two lines\n\nA\n  x\n',
+    );
+  });
+
+  test('the second and later doubts are continuation lines (SPEC §3.9)', () => {
+    const lines = print('A  ? one\n  ? two\n  x  ? three\n    ? four\n');
+    expect(lines[1]).toBe('  ? two');
+    expect(lines[3]).toBe('    ? four');
+    expect(column(lines[0] ?? '', '?')).toBe(40);
+    expect(column(lines[2] ?? '', '?')).toBe(40);
+  });
+
+  test('a description written on continuation lines comes back on the element line', () => {
+    expect(print('A\n  x  # one\n    # two\n')[1]).toBe(`  x${' '.repeat(37)}# one two`);
   });
 
   test('classes are separated by one blank line, with a final newline and no trailing blank', () => {

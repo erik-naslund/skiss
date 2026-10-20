@@ -161,10 +161,5 @@
     "kind": "enum_detail",
     "element": "audience_level_enum",
     "detail": "`introductory`, `intermediate`, `advanced` carry bodies of their own; the enum carries `description`"
-  },
-  {
-    "kind": "schema",
-    "element": "conference_programme",
-    "detail": "`description`"
   }
 ]

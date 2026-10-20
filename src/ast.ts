@@ -108,6 +108,14 @@ export interface Document {
   classes: ClassNode[];
   diagnostics: Diagnostic[];
   /**
+   * SPEC §3.1: the run of comment lines that starts on the first line of the
+   * file, each stripped of its `#` and one space, joined with a single space.
+   * Absent when the file does not start with one. It is the only column-0
+   * comment the document holds, and it compiles to the schema's own
+   * `description` (SPEC §5.1).
+   */
+  description?: string;
+  /**
    * Class names referenced by `:`, `~` or `=` but never declared, each once,
    * in first-reference order and at its first reference's position. Absent
    * until `resolve` has run; a generator draws these as placeholders.

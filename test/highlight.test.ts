@@ -222,6 +222,33 @@ describe('a line that is still being typed', () => {
   });
 });
 
+describe('a continuation line (SPEC §3.9, issue #90, AC6)', () => {
+  it.each([
+    ['a description and a doubt', '  # text ? doubt', ['description(# text)', 'doubt(? doubt)']],
+    [
+      'a description alone',
+      '    # as shown on the scoreboard',
+      ['description(# as shown on the scoreboard)'],
+    ],
+    ['a doubt alone', '  ? whose day governs', ['doubt(? whose day governs)']],
+  ])('is the trailer tokens and nothing else: %s', (_name, line, expected) => {
+    expect(reading(line)).toEqual(expected);
+  });
+
+  it('gives the offsets of the markers, the indentation out', () => {
+    expect(tokenizeLine('  # text ? doubt')).toEqual([
+      { kind: 'description', from: 2, to: 8 },
+      { kind: 'doubt', from: 9, to: 16 },
+    ]);
+  });
+
+  it('still reads a `#` line at column 0 as a comment', () => {
+    expect(reading('# what this sketch is about')).toEqual([
+      'comment(# what this sketch is about)',
+    ]);
+  });
+});
+
 describe('offsets', () => {
   it('counts from the start of the line, with the indentation in', () => {
     expect(tokenizeLine('    id*')).toEqual([

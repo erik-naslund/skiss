@@ -13,7 +13,15 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
-import { fromLinkML, parse, resolve, serialize, toLinkML, toMermaid } from '../dist/index.js';
+import {
+  fromLinkML,
+  parse,
+  resolve,
+  serialize,
+  toGlossary,
+  toLinkML,
+  toMermaid,
+} from '../dist/index.js';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'fixtures');
 const read = (name) => readFileSync(join(fixtures, name), 'utf8');
@@ -29,6 +37,16 @@ for (const name of ['basic', 'systems', 'broken']) {
   const doc = parse(read(`${name}.skiss`));
   write(`${name}.mmd`, toMermaid(doc));
   write(`${name}.linkml.yaml`, serialize(toLinkML(doc, { schemaName: name }), 'yaml'));
+}
+
+// The glossary fixture: the schema, then the three forms of the Markdown
+// (issue #90). Its name is the file's stem, which is what the CLI passes.
+{
+  const doc = resolve(parse(read('glossary.skiss')));
+  write('glossary.linkml.yaml', serialize(toLinkML(doc, { schemaName: 'glossary' }), 'yaml'));
+  write('glossary.md', toGlossary(doc, { name: 'glossary' }));
+  write('glossary.terms.md', toGlossary(doc, { name: 'glossary', classes: true }));
+  write('glossary.notes.md', toGlossary(doc, { name: 'glossary', notes: true }));
 }
 
 write(

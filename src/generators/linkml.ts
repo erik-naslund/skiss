@@ -41,6 +41,8 @@ export interface LinkMLEnum {
 export interface LinkMLSchema {
   id: string;
   name: string;
+  /** The document description (SPEC §3.1), written directly after `name`. */
+  description?: string;
   default_prefix: string;
   default_range: string;
   prefixes: Record<string, string>;
@@ -118,9 +120,15 @@ export function toLinkML(doc: Document, opts: LinkMLOptions): LinkMLSchema {
     return systemPrefix.get(system) ?? schemaName;
   };
 
+  // SPEC §5.1: the document description is the schema's own `description`,
+  // and SPEC §5.2 puts it between `name` and `default_prefix`. Written with
+  // a spread rather than assigned afterwards, because the key order of this
+  // object is the key order of the YAML.
+  const description = resolved.description;
   const schema: LinkMLSchema = {
     id: `${BASE_URI}/${schemaName}`,
     name: schemaName,
+    ...(description === undefined || description === '' ? {} : { description }),
     default_prefix: schemaName,
     default_range: 'string',
     prefixes,

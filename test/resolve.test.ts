@@ -100,7 +100,15 @@ function deepProxy<T extends object>(value: T): T {
 describe('an empty document', () => {
   test('zero classes resolves to zero diagnostics and an empty `undeclared`', () => {
     expect(resolve(parse(''))).toEqual({ classes: [], diagnostics: [], undeclared: [] });
+    // SPEC §3.1: the comment at the top is the document description, which
+    // `resolve` carries through untouched.
     expect(resolve(parse('# only a comment\n\n'))).toEqual({
+      classes: [],
+      diagnostics: [],
+      description: 'only a comment',
+      undeclared: [],
+    });
+    expect(resolve(parse('\n# only a comment\n'))).toEqual({
       classes: [],
       diagnostics: [],
       undeclared: [],
