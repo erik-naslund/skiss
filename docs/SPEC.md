@@ -438,7 +438,7 @@ A LinkML schema can be projected into Skiss so it can be read and discussed as a
 | `description` | `#`, its newlines replaced by spaces |
 | the schema's own `description` | the document description (§3.1), one `#` line at the top of the file, its newlines replaced by spaces |
 | `annotations: {system: S}` | `@S` |
-| `annotations: {note: text}` | `? text` |
+| `annotations: {note: text}` | `? text`, one doubt per line of it (§3.9) |
 | `annotations: {joins_to: Class.field}` | `= Class.field` |
 | `close_mappings: [prefix:Class]`, or a full IRI | `~ Class`, from the first entry: the name after its last `:`, `/` or `#` |
 

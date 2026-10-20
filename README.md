@@ -46,7 +46,7 @@ Skiss is text you can type while someone talks. A field is one line. A change is
 - **`@Catalog` says which system owns a thing.** On a class, or on a single field when the box is really a view over two systems.
 - **`~` and `=` are two different statements.** `~` says two classes are about the same thing. `=` says which field joins to which. The first is a domain conversation, the second an integration conversation.
 - **`<` inherits, once.** `Jedi < Character` on the class line: the child has everything the parent has and adds its own. One parent, no mixins; it compiles to `is_a`.
-- **`#` describes, `?` doubts.** A description ends up in generated documentation. A doubt never does.
+- **`#` describes, `?` doubts.** A description ends up in generated documentation. A doubt never does. A description too long for the line continues on indented `#` lines under it, and the `#` block at the top of the file describes the whole sketch.
 - **Names are ASCII.** `A`–`Z`, `a`–`z`, `0`–`9`, and nothing else: a name becomes an identifier and a URI in LinkML, a class in generated Python, a node in a diagram, and none of those take the rest of the alphabet. The words of the domain, in whatever alphabet they are spoken, go in the `#` description ([SPEC §4](docs/SPEC.md#4-grammar)).
 - **Every line stands on its own.** A half-typed line breaks that line and nothing else, so the diagram keeps rendering while you type.
 - **Everything you can write compiles to valid LinkML.** Skiss is a strict subset. Nothing is lost on the way up.
@@ -72,9 +72,26 @@ Or without installing: `npx @eriknaslund/skiss diagram model.skiss`.
 
 `skiss compile model.skiss` writes a LinkML schema instead, as YAML on standard output. `--json` writes the same schema as JSON, `--name` sets the schema name (it defaults to the file name without its extension, and to `sketch` when reading standard input), and `-o`, `-`, `--strict` and the diagnostics work exactly as they do for `diagram`.
 
+`skiss glossary model.skiss` writes what the sketch says about the words in it, as Markdown: one section per class, with its fields in a table and the `#` descriptions as the definitions. A sketch is where each thing is named, so the terminology page is generated from it rather than kept beside it and allowed to drift.
+
+```
+# A build and release pipeline
+
+## Environment
+
+System: Platform. One installation of the platform, with its own data.
+
+| Field | Type | Description |
+|---|---|---|
+| id | identifier | |
+| purpose | build / test / playtest / live | |
+```
+
+`--classes` writes the terms alone, as a `| Term | Definition |` table, which is the shape a glossary page usually wants; `--notes` adds the `? ` doubts as open questions, which nothing else in the output shows, because a doubt is never documentation. `--name` is the heading, and `-o`, `-`, `--strict` and the diagnostics work exactly as they do for `compile`.
+
 `skiss import schema.linkml.yaml` goes the other way: it reads a LinkML schema, YAML or JSON, and writes Skiss. What the projection could not carry — patterns, `required`, `mixins`, the names it had to convert — is one line on standard error before the diagnostics, because a sketch is a smaller language than LinkML and that line says by how much. `-o`, `-` and the diagnostics work as they do for `compile`; `--strict` exits 1 when the projected sketch has a diagnostic, and also when anything was dropped. An input that is not a schema at all — not YAML, or YAML no schema can be read out of — produces no sketch, says why on standard error, and exits 2, the code every command uses for unreadable input.
 
-`npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toSkiss`, `fromLinkML`, `formatDropped`, `importLinkML`, `tokenizeLine` and `VERSION`, browser-safe.
+`npm install @eriknaslund/skiss` also gives you the library: `compile`, `formatDiagnostic`, `parse`, `resolve`, `toLinkML`, `serialize`, `toMermaid`, `toGlossary`, `toSkiss`, `fromLinkML`, `formatDropped`, `importLinkML`, `tokenizeLine` and `VERSION`, browser-safe.
 
 `tokenizeLine` is there for editors: it says where the words of one line are — `{ kind, from, to }` for each run of characters, so a host can colour them. It is line-based and stateless, as the language is: one line in, its tokens out, nothing carried from the line before, and nothing said about a run it does not recognise, so a half-typed line keeps the colours it has earned. It is not a parser and reports nothing; diagnostics stay `parse` and `resolve`'s ([ADR 0010](docs/adr/0010-tokeniser-in-the-package.md)).
 
@@ -96,7 +113,7 @@ Editors that render Skiss live are separate projects built on this package. This
 
 0.7.0, published on npm as [`@eriknaslund/skiss`](https://www.npmjs.com/package/@eriknaslund/skiss). The language parses, resolves and diagnoses; `skiss diagram` draws it, `skiss compile` writes LinkML that the real LinkML toolchain validates in CI, and `skiss import` reads a LinkML schema back into a sketch. The library exports the same in both directions and is browser-safe.
 
-The [specification](docs/SPEC.md) is at 0.3.1 and moves when the language does, which is not with every release. Not built: editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
+The [specification](docs/SPEC.md) is at 0.4.0 and moves when the language does, which is not with every release. Not built: editing a projected schema so that what Skiss cannot express survives the edit (SPEC §8.1). [CHANGELOG.md](CHANGELOG.md) is what changed when.
 
 ## License
 

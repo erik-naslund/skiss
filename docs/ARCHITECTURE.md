@@ -26,6 +26,7 @@ skiss/
       linkml.ts       # Document -> LinkML schema object (0.2.0)
       skiss.ts        # Document -> canonical Skiss text (0.3.0)
       from-linkml.ts  # LinkML schema object -> Document + what it dropped (0.3.0)
+      glossary.ts     # Document -> the descriptions as Markdown (0.8.0)
     serialize.ts      # schema object -> YAML / JSON (0.2.0)
     import.ts         # LinkML text -> Skiss text in one call (0.3.0)
     cli.ts            # the `skiss` command (Node only)
@@ -45,6 +46,7 @@ The commands:
 |---|---|---|
 | `skiss diagram <file>` | a Mermaid class diagram | nothing |
 | `skiss compile <file>` | a LinkML schema, YAML or JSON | nothing |
+| `skiss glossary <file>` | the descriptions of a sketch, as Markdown | nothing |
 | `skiss import <file>` | Skiss, from a LinkML schema | nothing |
 | `skiss render <file>` | an SVG or a PNG of the class diagram | `mmdc`, the Mermaid CLI |
 
@@ -77,6 +79,7 @@ Document (AST) + warnings
    ├─▶ toLinkML()    → LinkML schema as a plain object
    │      └─▶ serialize()  → YAML or JSON text
    ├─▶ toMermaid()   → Mermaid classDiagram text
+   ├─▶ toGlossary()  → the descriptions as Markdown
    └─▶ toSkiss()     → canonical Skiss text
 
 LinkML schema object
@@ -118,7 +121,12 @@ export function importLinkML(text: string): { output: string; dropped: Dropped[]
 
 // 0.6.0
 export function tokenizeLine(line: string): Token[];   // { kind, from, to } per run, for editors
+
+// 0.8.0
+export function toGlossary(doc: ResolvedDocument, opts?: { name?: string; classes?: boolean; notes?: boolean }): string;
 ```
+
+`compile` takes the target as a union, so `{ target: 'glossary', name }` writes the Markdown the same way `{ target: 'linkml', schemaName }` writes the schema.
 
 `parse` never throws and never returns null. It returns whatever it could read plus diagnostics.
 
@@ -129,7 +137,7 @@ export function tokenizeLine(line: string): Token[];   // { kind, from, to } per
 Every node carries its source position: a line number, and a column range for each token. Line numbers drive error lists. Column ranges are what an editor needs for highlighting and squiggles, and they cost nothing to record now.
 
 ```ts
-interface Document  { classes: ClassNode[]; diagnostics: Diagnostic[]; undeclared?: Name[] }
+interface Document  { classes: ClassNode[]; diagnostics: Diagnostic[]; description?: string; undeclared?: Name[] }
 interface ClassNode { name: Name; parent?: Name; system?: Name; similarTo?: Name; description?: string; note?: string; fields: FieldNode[]; line: number }
 interface FieldNode { name: Name; identifier: boolean; identifierAt?: Name; type?: TypeRef; system?: Name; joinsTo?: { className: Name; fieldName: Name }; description?: string; note?: string; line: number }
 type TypeRef = { kind: 'primitive'; name: Primitive; written: Name; many: boolean }
@@ -140,7 +148,7 @@ interface Name { text: string; line: number; col: number; end: number }
 interface Diagnostic { severity: 'error' | 'warning'; code: string; message: string; line: number; col?: number; end?: number }
 ```
 
-`undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `parent` is the class after `<` (SPEC §3.10); `resolve` clears it on the class whose `<` closes a circle, as it clears `identifier` on a second `*`, so a generator never has to know a circle from a chain. Which fields a class inherits along that chain is `inheritance.ts`, which `resolve` reads for its diagnostics; a generator needs no view of the chain, because a class writes only the fields written on it (SPEC §5.1). `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
+`description` is the document description (SPEC §3.1), the one column-0 comment a document holds; it is absent when the file does not start with one. A description written on continuation lines and the doubts of one element are still the `description` and `note` strings of the node they belong to: continuation is a layout, not a shape, so nothing downstream has to know about it. The doubts of one element are the lines of its `note`, in source order. `undeclared` is absent until `resolve` has run and is the list a generator draws placeholders from. `parent` is the class after `<` (SPEC §3.10); `resolve` clears it on the class whose `<` closes a circle, as it clears `identifier` on a second `*`, so a generator never has to know a circle from a chain. Which fields a class inherits along that chain is `inheritance.ts`, which `resolve` reads for its diagnostics; a generator needs no view of the chain, because a class writes only the fields written on it (SPEC §5.1). `written` is the type word as it was typed, so the alias `integer` survives a round trip through the AST. `unknown` is a whole arm of the union and not a detail: it is what SPEC §3.2's unknown-type rule produces, and a consumer switching on `kind` has to handle it. `identifierAt` is where the `*` is, which is where `W_MULTIPLE_IDENTIFIERS` points.
 
 Exact shapes are decided in code. What must be present is the position on every node and the diagnostic list on the document.
 
@@ -150,7 +158,7 @@ Errors come from `parse` and mean "this line could not be read and was skipped".
 
 | Code | Severity | Trigger |
 |---|---|---|
-| `E_UNPARSABLE` | error | The line matches no production. |
+| `E_UNPARSABLE` | error | The line matches no production. Also a continuation line with no class or field line above it to continue (SPEC §3.9): "A description line needs a class or a field above it". |
 | `E_FIELD_WITHOUT_CLASS` | error | An indented line with no current class: before any class line, or after a class line that failed somewhere other than at a name. Such a line clears the current class, so its fields are not silently attached to the previous one. A class line that failed *at* a name — its own, the one after `~`, the one after `<` — is still a class line above its fields: they are dropped with it and report nothing, so one bad name is one diagnostic. |
 | `E_MISSING_TYPE` | error | A colon with nothing after it. |
 | `E_UNCLOSED_MANY` | error | `[` without `]`. |
@@ -190,7 +198,8 @@ Checked against a real Mermaid parser. The three surprises are marked.
 | `= Other.field` | `A ..> B : fieldName = field` |
 | undeclared class | `class Name { <<undeclared>> }`, after the declared classes |
 | `# text` | omitted |
-| `? text` | omitted by default. With `notes: true`, `note for Class "text"` for a class doubt and `note for Class "field: text"` for a field doubt. **Note lines are emitted before any relation line; Mermaid fails to parse a note that follows a `..>` relation.** |
+| `? text` | omitted by default. With `notes: true`, `note for Class "text"` for a class doubt and `note for Class "field: text"` for a field doubt, one line per doubt (SPEC §3.9), since a Mermaid note is one line. **Note lines are emitted before any relation line; Mermaid fails to parse a note that follows a `..>` relation.** |
+| the document description | omitted |
 
 Output order: classes, undeclared placeholders, notes, relations. A class's relations are its `<` first, then `~`, then its fields in order. Two-space indentation, no trailing whitespace, one trailing newline.
 
@@ -199,6 +208,30 @@ Output order: classes, undeclared placeholders, notes, relations. A class's rela
 ## LinkML mapping
 
 SPEC §5. The worked example in §5.3 is a golden test.
+
+## Glossary mapping
+
+`toGlossary` writes what a sketch says about the words in it, as Markdown: the sketch is where each thing is defined, so the terminology page is generated from it rather than kept beside it. The `glossary.md`, `glossary.terms.md` and `glossary.notes.md` fixtures are the contract.
+
+| Skiss | Markdown |
+|---|---|
+| the document description | the paragraph under the `#` heading, which is `name` |
+| a class | `## ClassName`, in sketch order |
+| `@System`, `< Parent`, `~ Other` | `System: S.`, `Extends Parent.`, `Similar to Other.`, the first sentences of the class's paragraph |
+| `# text` on a class | the rest of that paragraph, capitalised and given a full stop: it is a definition |
+| a field | a row of the class's table: name, type, description. A class with no fields of its own has no table; an inherited field is not repeated |
+| `*` | `identifier` in the Type column, before the type when there is one (`identifier, int`) |
+| `: Other` | `[Other](#other)`, the anchor GitHub generates. An undeclared class is plain text: there is no section to point at |
+| `: X[]` | `list of X` |
+| `: a\|b\|c` | `a / b / c` |
+| `# text` on a field | the Description column, as written |
+| `@System`, `= Other.field` on a field | `System: S.` and `Joins to Other.field.`, appended to that cell |
+| `? text` | nothing. SPEC §3.9: a doubt is never documentation. With `notes`, `**Open questions**` after the class's table: the class's doubts first, then `field: doubt`, one bullet per doubt |
+| `classes` | the whole sketch as one `| Term | Definition |` table instead, one row per class, a class with no definition keeping its row so the gap is visible. With `notes`, a third column holds the class's doubts, joined with `<br>` |
+
+A `|` in any text is escaped as `\|` and a cell never holds a newline: a Markdown row is one line.
+
+`skiss glossary <file> [--classes] [--notes] [--name <name>] [-o <path>] [--strict]` is that generator from the command line, with the conventions of `diagram` and `compile`: `-` for standard input, the Markdown on standard output or to `-o` verbatim, the diagnostics of the sketch on standard error, and the same exit codes. `--name` is the heading and defaults to the file's basename without its extension, or `sketch` for standard input, exactly as the schema name does.
 
 ## LinkML import
 
@@ -240,10 +273,12 @@ test/fixtures/
   basic.skiss     basic.linkml.yaml     basic.mmd
   systems.skiss   systems.linkml.yaml   systems.mmd
   broken.skiss    broken.diagnostics.json
+  glossary.skiss  glossary.linkml.yaml  glossary.md
+                  glossary.terms.md     glossary.notes.md
   foreign.linkml.yaml   foreign.skiss   foreign.dropped.json
 ```
 
-Golden-file comparison. When output changes on purpose, the diff is the review ([ADR 0007](adr/0007-testing-strategy.md)). The derived files are rewritten by the library itself, never by hand: `pnpm build && node scripts/regenerate-fixtures.mjs` writes every `.mmd`, `.linkml.yaml`, `basic.ast.json`, `broken.diagnostics.json` and the `foreign` projection from the `.skiss` inputs and `foreign.linkml.yaml`.
+Golden-file comparison. When output changes on purpose, the diff is the review ([ADR 0007](adr/0007-testing-strategy.md)). The derived files are rewritten by the library itself, never by hand: `pnpm build && node scripts/regenerate-fixtures.mjs` writes every `.mmd`, `.linkml.yaml`, the three `glossary` Markdown files, `basic.ast.json`, `broken.diagnostics.json` and the `foreign` projection from the `.skiss` inputs and `foreign.linkml.yaml`.
 
 `broken.skiss` is the important one. It holds the mid-typing states: a trailing colon with no type, an unclosed `[`, a field indented under nothing, a `~` to a class that does not exist, a misspelled primitive. Each must produce the diagnostic from the table above *and* a usable partial document.
 

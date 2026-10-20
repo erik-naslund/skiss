@@ -43,6 +43,10 @@ What workshop use asked for first. In order:
 
 ~~**`tokenizeLine` in the library** ([#73](https://github.com/erik-naslund/skiss/issues/73), [ADR 0010](adr/0010-tokeniser-in-the-package.md)): the line tokeniser the Obsidian plugin wrote for itself moves into the package, so the plugin and the playground colour a sketch the same way and a SPEC change reaches both through one bump.~~
 
+## Milestone 6: The glossary (0.8.0)
+
+~~**Descriptions on their own lines, a document description, and `skiss glossary`** ([#90](https://github.com/erik-naslund/skiss/issues/90)): a description may stand on indented `#` lines under the class or field it describes, the comment block at the top of a file describes the document, and `skiss glossary` writes the definitions out as Markdown, so a terminology page is generated from the sketch instead of drifting beside it. SPEC 0.4.0.~~ The release itself is its own PR.
+
 ## Later, unscheduled
 
 - **Editing a projected schema** (SPEC §8.1): stable identity, merge-back, the two modes.
